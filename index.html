@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Stellar Death — Spacetime Relativity Simulation</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;600;700&family=Bebas+Neue&family=JetBrains+Mono:wght@300;400&display=swap');
@@ -27,20 +27,34 @@
     font-family: 'Chakra Petch', sans-serif;
     color: var(--c-text);
     cursor: crosshair;
+    touch-action: none;
+    overscroll-behavior: none;
+    position: fixed;
+    width: 100%;
+    height: 100%;
   }
 
-  canvas { display: block; }
+  html {
+    overflow: hidden;
+    overscroll-behavior: none;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+  }
 
+  canvas { display: block; touch-action: none; }
+
+  /* HUD */
   .hud { position: fixed; z-index: 10; pointer-events: none; }
 
   #header {
-    top: 18px; left: 0; width: 100%;
-    text-align: center;
+    top: 14px; left: 24px; width: auto;
+    text-align: left;
     opacity: 0; animation: hud-in 2s ease 0.5s forwards;
   }
   #header h1 {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: clamp(18px, 3vw, 32px);
+    font-size: clamp(16px, 2.5vw, 28px);
     letter-spacing: 12px;
     background: linear-gradient(90deg, #ff5722 0%, #ff2d95 35%, #7c4dff 65%, #00e5ff 100%);
     -webkit-background-clip: text;
@@ -49,42 +63,51 @@
   }
   #header .sub {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 9px; letter-spacing: 4px;
+    font-size: 8px; letter-spacing: 3px;
     color: var(--c-text-dim); margin-top: 3px;
+    max-width: 55vw;
+    line-height: 1.4;
   }
 
-  /* Phase Banner */
+  /* Phase Banner — directly below header, no overlap */
   #phase-banner {
-    top: 70px; left: 24px;
+    top: 68px; left: 24px;
     transform: none;
     text-align: left;
     opacity: 0;
     transition: opacity 1.2s ease;
     pointer-events: none;
+    max-width: 50vw;
   }
   #phase-banner.show { opacity: 1; }
   #phase-banner h2 {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: clamp(20px, 3.5vw, 42px);
-    letter-spacing: 8px;
+    font-size: clamp(18px, 3vw, 36px);
+    letter-spacing: 6px;
     color: #fff;
     text-shadow: 0 0 60px rgba(255,87,34,0.6), 0 0 120px rgba(124,77,255,0.3);
+    line-height: 1.1;
   }
   #phase-banner p {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; letter-spacing: 4px;
-    color: var(--c-text-dim); margin-top: 8px;
+    font-size: 9px; letter-spacing: 3px;
+    color: var(--c-text-dim); margin-top: 4px;
+    line-height: 1.3;
+    max-width: 45vw;
   }
 
-  /* ── Equation — HIGH CONTRAST ── */
   #equation {
-    top: 140px; left: 28px;
-    opacity: 0; animation: hud-in 2s ease 1.6s forwards;
-    background: rgba(0,0,0,0.5);
-    padding: 12px 16px;
+    top: 145px; /* or 135px depending on your layout */
+    left: 28px;
+    opacity: 0;
+    animation: hud-in 2s ease 1.6s forwards;
+    padding: 10px 14px;
     border-radius: 6px;
+    max-width: 420px;
     border-left: 2px solid rgba(255,45,149,0.5);
+    background: none;
   }
+
   .eq {
     font-family: 'JetBrains Mono', monospace;
     font-size: 15px;
@@ -106,7 +129,7 @@
     margin-bottom: 6px;
   }
 
-  /* ── Info Panel (bottom-left) ── */
+  /* Info Panel */
   #info {
     bottom: 24px; left: 24px;
     opacity: 0; animation: hud-in 2s ease 1s forwards;
@@ -126,7 +149,7 @@
     font-size: 12px; color: var(--c-text); margin-top: 1px;
   }
 
-  /* ── Controls (bottom-right) ── */
+  /* Controls (bottom-right) */
   #controls {
     bottom: 24px; right: 24px;
     pointer-events: auto;
@@ -168,9 +191,9 @@
     border-radius: 50%; background: #00e5ff; cursor: pointer;
   }
 
-  /* ── Planet status (top-right) ── */
+  /* Planet status */
   #planet-status {
-    top: 80px; right: 24px;
+    top: 18px; right: 24px;
     opacity: 0; animation: hud-in 2s ease 1.5s forwards;
   }
   .ps-item {
@@ -184,7 +207,7 @@
   .ps-name { font-size: 10px; letter-spacing: 1px; color: var(--c-text-dim); transition: all 0.5s; }
   .ps-dist { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--c-text-dim); min-width: 55px; text-align: right; }
 
-  /* ── Timeline — ABOVE controls ── */
+  /* Timeline */
   #timeline {
     bottom: 170px; left: 50%; transform: translateX(-50%);
     width: min(75vw, 560px);
@@ -192,7 +215,7 @@
     pointer-events: auto;
   }
   #timeline .track {
-    width: 100%; height: 3px;
+    flex: 1; height: 3px;
     background: rgba(255,255,255,0.06); border-radius: 2px;
   }
   #timeline .fill {
@@ -214,6 +237,32 @@
   }
   #timeline .mrk:hover, #timeline .mrk.active { color: #fff; }
 
+  /* Play/Pause Button (inline with .btn row) */
+  .play-pause-btn {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    padding: 4px 7px !important;
+  }
+  .play-pause-btn svg {
+    width: 10px; height: 10px;
+    fill: rgba(255,255,255,0.5);
+    transition: fill 0.3s;
+    display: block;
+  }
+  .play-pause-btn:hover svg { fill: #fff; }
+  .play-pause-btn.paused {
+    background: rgba(255,87,34,0.12) !important;
+    border-color: rgba(255,87,34,0.5) !important;
+    color: #ff5722 !important;
+  }
+  .play-pause-btn.paused svg { fill: #ff5722; }
+  .play-pause-btn.paused:hover {
+    background: rgba(255,87,34,0.2) !important;
+  }
+  .play-pause-btn.paused:hover svg { fill: #ff8a65; }
+
   @keyframes hud-in {
     from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
@@ -232,6 +281,149 @@
     animation: ldPulse 1.5s ease infinite;
   }
   @keyframes ldPulse { 0%,100%{opacity:0.2}50%{opacity:0.6} }
+
+  /* MOBILE RESPONSIVE */
+  /* Tablet & small desktop */
+  @media (max-width: 900px) {
+    #header h1 { letter-spacing: 8px; }
+    #header .sub { font-size: 7px; letter-spacing: 2px; }
+    #phase-banner h2 { font-size: clamp(16px, 3vw, 30px); letter-spacing: 4px; }
+    #phase-banner p { font-size: 8px; letter-spacing: 2px; }
+    #equation { top: 135px; }
+    .eq { font-size: 12px; }
+    .eq-sm { font-size: 10px; }
+    #timeline { width: min(85vw, 480px); bottom: 150px; }
+    #timeline .mrk { font-size: 6px; letter-spacing: 1px; }
+  }
+
+  /* Phone landscape & small tablets */
+  @media (max-width: 680px) {
+    #header { top: 8px; left: 12px; }
+    #header h1 { font-size: 13px; letter-spacing: 5px; }
+    #header .sub { font-size: 6px; letter-spacing: 1.5px; }
+
+    #phase-banner { top: 50px; left: 12px; max-width: 55vw; }
+    #phase-banner h2 { font-size: clamp(14px, 4vw, 22px); letter-spacing: 3px; }
+    #phase-banner p { font-size: 7px; letter-spacing: 1.5px; }
+
+    #equation { top: 105px; left: 12px; padding: 8px 10px; max-width: 55vw; }
+    .eq-label { font-size: 6px; letter-spacing: 2px; margin-bottom: 3px; }
+    .eq { font-size: 10px; letter-spacing: 1px; }
+    .eq-sm { font-size: 8px; margin-top: 3px; }
+
+    #info { bottom: 12px; left: 12px; padding: 8px 10px; max-width: 160px; }
+    .info-row { margin-bottom: 4px; }
+    .info-row .lbl { font-size: 6px; letter-spacing: 2px; }
+    .info-row .val { font-size: 9px; }
+
+    #controls { bottom: 12px; right: 12px; padding: 8px 10px; }
+    .btn { padding: 3px 6px; font-size: 6px; letter-spacing: 1px; }
+    .sld label { font-size: 6px; min-width: 45px; letter-spacing: 1px; }
+    input[type="range"] { width: 60px; }
+
+    #planet-status { top: 10px; right: 12px; }
+    .ps-name { font-size: 8px; }
+    .ps-dist { font-size: 7px; min-width: 40px; }
+    .ps-dot { width: 5px; height: 5px; }
+    .ps-item { gap: 4px; margin-bottom: 2px; }
+
+    #timeline { bottom: 120px; width: min(90vw, 400px); }
+    #timeline .mrk { font-size: 5px; letter-spacing: 0.5px; }
+    #timeline .markers { gap: 1px; }
+  }
+
+  /* Phone portrait */
+  @media (max-width: 480px) {
+    #header { top: 6px; left: 10px; }
+    #header h1 { font-size: 11px; letter-spacing: 3px; }
+    #header .sub { display: none; }
+
+    #phase-banner { top: 30px; left: 10px; max-width: 60vw; }
+    #phase-banner h2 { font-size: clamp(13px, 5vw, 20px); letter-spacing: 2px; }
+    #phase-banner p { font-size: 6px; letter-spacing: 1px; max-width: 55vw; }
+
+    #equation { top: 78px; left: 10px; padding: 6px 8px; max-width: 60vw; }
+    .eq-label { font-size: 5px; margin-bottom: 2px; }
+    .eq { font-size: 8px; letter-spacing: 0.5px; }
+    .eq-sm { font-size: 7px; margin-top: 2px; }
+
+    #info { bottom: 8px; left: 8px; padding: 6px 8px; max-width: 130px; }
+    .info-row { margin-bottom: 3px; }
+    .info-row .lbl { font-size: 5px; letter-spacing: 1.5px; }
+    .info-row .val { font-size: 8px; }
+
+    #controls { bottom: 8px; right: 8px; padding: 6px 8px; max-width: 170px; }
+    .ctrl-row { gap: 2px; }
+    .btn { padding: 3px 5px; font-size: 5px; letter-spacing: 0.5px; }
+    .sld { gap: 4px; margin: 2px 0; }
+    .sld label { font-size: 5px; min-width: 35px; letter-spacing: 1px; }
+    input[type="range"] { width: 50px; height: 2px; }
+    input[type="range"]::-webkit-slider-thumb { width: 14px; height: 14px; }
+
+    #planet-status { top: 6px; right: 8px; }
+    .ps-name { font-size: 7px; letter-spacing: 0.5px; }
+    .ps-dist { font-size: 6px; min-width: 35px; }
+    .ps-dot { width: 4px; height: 4px; }
+    .ps-item { gap: 3px; margin-bottom: 1px; }
+
+    #timeline { bottom: 100px; width: 92vw; }
+    #timeline .track { height: 2px; }
+    #timeline .mrk { font-size: 4.5px; letter-spacing: 0px; padding: 3px 0; }
+    #timeline .markers { margin-top: 5px; gap: 0px; }
+  }
+
+  /* Very small phones (iPhone SE, Galaxy Fold, etc.) */
+  @media (max-width: 360px) {
+    #header h1 { font-size: 9px; letter-spacing: 2px; }
+    #phase-banner { top: 24px; }
+    #phase-banner h2 { font-size: 13px; letter-spacing: 2px; }
+    #phase-banner p { display: none; }
+    #equation { top: 50px; padding: 4px 6px; }
+    .eq { font-size: 7px; }
+    .eq-sm { font-size: 6px; }
+    #info { max-width: 110px; }
+    #controls { max-width: 150px; }
+    .sld label { display: none; }
+    input[type="range"] { width: 45px; }
+    #planet-status { display: none; }
+    #timeline .mrk { font-size: 4px; }
+  }
+
+  /* Landscape phones — maximize viewport */
+  @media (max-height: 450px) and (orientation: landscape) {
+    #header { top: 4px; left: 10px; }
+    #header h1 { font-size: 10px; letter-spacing: 4px; }
+    #header .sub { display: none; }
+    #phase-banner { top: 22px; left: 10px; }
+    #phase-banner h2 { font-size: 16px; letter-spacing: 3px; }
+    #phase-banner p { display: none; }
+    #equation { top: 48px; left: 10px; padding: 4px 8px; }
+    .eq { font-size: 8px; }
+    .eq-sm { font-size: 7px; }
+    #info { bottom: 8px; left: 8px; padding: 5px 8px; max-width: 140px; }
+    .info-row .lbl { font-size: 5px; }
+    .info-row .val { font-size: 8px; }
+    .info-row { margin-bottom: 2px; }
+    #controls { bottom: 8px; right: 8px; padding: 5px 8px; }
+    .btn { padding: 2px 5px; font-size: 5px; }
+    .sld { margin: 1px 0; }
+    input[type="range"] { width: 50px; }
+    #planet-status { top: 4px; right: 8px; }
+    .ps-item { margin-bottom: 1px; }
+    .ps-name { font-size: 7px; }
+    .ps-dist { font-size: 6px; }
+    #timeline { bottom: 85px; width: 70vw; }
+    #timeline .mrk { font-size: 5px; }
+  }
+
+  /* Touch-friendly: larger hit targets on touch devices */
+  @media (pointer: coarse) {
+    .btn { padding: 6px 10px; font-size: 7px; min-height: 28px; display: inline-flex; align-items: center; }
+    input[type="range"] { height: 4px; }
+    input[type="range"]::-webkit-slider-thumb { width: 18px; height: 18px; }
+    #timeline .mrk { padding: 6px 2px; font-size: 6px; }
+    body { cursor: default; }
+  }
 </style>
 </head>
 <body>
@@ -270,6 +462,10 @@
 
 <div id="controls" class="hud">
   <div class="ctrl-row">
+    <span class="btn play-pause-btn" id="play-pause-btn" onclick="togglePause()" title="Play / Pause">
+      <svg id="pp-icon-pause" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+      <svg id="pp-icon-play" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="display:none;"><polygon points="6,4 20,12 6,20"/></svg>
+    </span>
     <span class="btn on" onclick="tog('fabric',this)">Fabric</span>
     <span class="btn on" onclick="tog('photons',this)">Photons</span>
     <span class="btn on" onclick="tog('lensing',this)">Lensing</span>
@@ -310,9 +506,9 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-
-// SHARED GLSL: 3D Simplex Noise + FBM
-
+// 
+// SHARED GLSL: 3D Simplex Noise + FBM (injected into all shaders)
+// 
 const NOISE_GLSL = `
 // 3D Simplex Noise (Ashima/Stefan Gustavson)
 vec3 mod289(vec3 x){return x-floor(x*(1.0/289.0))*289.0;}
@@ -385,7 +581,9 @@ float turbulence(vec3 p){
 }
 `;
 
-
+// 
+// BLOOM POST-PROCESSING (manual multi-pass, no EffectComposer needed)
+// 
 class AdvancedPipeline {
   constructor(renderer, w, h) {
     this.renderer = renderer;
@@ -500,14 +698,12 @@ class AdvancedPipeline {
   initLensing(w, h) {
     const pars = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat };
     this.lensingRT = new THREE.WebGLRenderTarget(w, h, pars);
-    // Screen-space gravitational lensing shader
-    // Projects BH world position to screen, applies Einstein ring deflection
     this.lensingMat = new THREE.ShaderMaterial({
       uniforms: {
         tDiffuse: { value: null },
-        uBHScreen: { value: new THREE.Vector2(0.5, 0.5) }, // BH center in UV space
-        uRS: { value: 0.05 },      // Schwarzschild radius in screen units
-        uMassParam: { value: 0.0 }, // 0 = no lensing, scales with mass
+        uBHScreen: { value: new THREE.Vector2(0.5, 0.5) },
+        uRS: { value: 0.05 },
+        uMassParam: { value: 0.0 },
         uAspect: { value: w / h },
       },
       vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position,1.0); }`,
@@ -517,50 +713,28 @@ class AdvancedPipeline {
         uniform float uRS, uMassParam, uAspect;
         varying vec2 vUv;
         void main(){
-          // Correct for aspect ratio so lensing is circular
           vec2 uv = vUv;
           vec2 aspect = vec2(uAspect, 1.0);
           vec2 d = (uv - uBHScreen) * aspect;
           float dist = length(d);
-
-          // Schwarzschild radius in screen space
           float rs = uRS * uMassParam;
-
-          // Event horizon: pure black void
           if(dist < rs * 0.4){
             gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
             return;
           }
-
-          // Einstein ring deflection: α = 4GM/(c²b) → in screen space: deflection ∝ rs²/dist
-          // This bends background UVs inward toward the BH center
           float deflection = (rs * rs) / max(dist, rs * 0.4);
-
-          // Smooth falloff to avoid harsh boundary
           float falloff = smoothstep(rs * 0.4, rs * 2.0, dist);
           deflection *= falloff;
-
-          // Apply UV distortion — pull pixels toward BH
           vec2 distortion = normalize(d) * deflection / aspect;
           vec2 lensedUV = uv - distortion;
-
-          // Clamp to prevent sampling outside texture
           lensedUV = clamp(lensedUV, 0.001, 0.999);
-
           vec4 col = texture2D(tDiffuse, lensedUV);
-
-          // Photon ring at ~1.5× event horizon (photon sphere)
           float photonRing = smoothstep(rs * 1.3, rs * 1.5, dist) * (1.0 - smoothstep(rs * 1.5, rs * 1.7, dist));
           col.rgb += vec3(0.8, 0.7, 0.5) * photonRing * uMassParam * 0.6;
-
-          // Einstein ring: secondary image ring at ~rs
           float einsteinRing = smoothstep(rs * 0.9, rs * 1.0, dist) * (1.0 - smoothstep(rs * 1.0, rs * 1.15, dist));
           col.rgb += vec3(0.6, 0.8, 1.0) * einsteinRing * uMassParam * 0.35;
-
-          // Slight darkening near event horizon edge (light bending into BH)
           float edgeDark = smoothstep(rs * 0.4, rs * 1.2, dist);
           col.rgb *= edgeDark;
-
           gl_FragColor = col;
         }`
     });
@@ -575,48 +749,42 @@ class AdvancedPipeline {
 
   render(scene, camera) {
     const gl = this.renderer;
-    // 1. Render full scene into HDR buffer
     gl.setRenderTarget(this.sceneRT);
     gl.clear();
     gl.render(scene, camera);
-    // 2. Extract bright pixels
     this.brightMat.uniforms.tDiffuse.value = this.sceneRT.texture;
     this.brightMat.uniforms.uThreshold.value = this.threshold;
     this._renderQuad(this.brightMat, this.levels[0].hRT);
-    // 3. Progressive downsample + separable Gaussian blur
     let inputTex = this.levels[0].hRT.texture;
     for (let i = 0; i < 5; i++) {
       const lv = this.levels[i];
-      // Horizontal blur pass
       this.blurMatH.uniforms.tDiffuse.value = inputTex;
       this.blurMatH.uniforms.uRes.value.set(lv.width, lv.height);
       this._renderQuad(this.blurMatH, lv.vRT);
-      // Vertical blur pass
       this.blurMatV.uniforms.tDiffuse.value = lv.vRT.texture;
       this.blurMatV.uniforms.uRes.value.set(lv.width, lv.height);
       this._renderQuad(this.blurMatV, lv.hRT);
-      // Feed into next smaller level
       inputTex = lv.hRT.texture;
     }
-    // 4. Composite: scene + weighted bloom mips
     this.compositeMat.uniforms.tScene.value = this.sceneRT.texture;
     for (let i = 0; i < 5; i++) {
       this.compositeMat.uniforms['tBloom'+i].value = this.levels[i].hRT.texture;
     }
     this.compositeMat.uniforms.uStrength.value = this.strength;
     this.compositeMat.uniforms.uRadius.value = this.radius;
-    // If lensing is active, composite to lensingRT, then apply lensing to screen
     if(this.lensingMat && this.lensingMat.uniforms.uMassParam.value > 0.01){
       this._renderQuad(this.compositeMat, this.lensingRT);
       this.lensingMat.uniforms.tDiffuse.value = this.lensingRT.texture;
-      this._renderQuad(this.lensingMat, null); // null = screen
+      this._renderQuad(this.lensingMat, null);
     } else {
-      this._renderQuad(this.compositeMat, null); // null = screen
+      this._renderQuad(this.compositeMat, null);
     }
   }
 }
 
+// 
 // SimulationState: Encapsulates all 10 phases of stellar evolution
+// 
 class SimulationState {
   constructor() {
     this.currentPhase = 0;
@@ -667,7 +835,9 @@ class SimulationState {
   }
 }
 
+// 
 // MAIN SIMULATION
+// 
 let scene,camera,renderer,clock,pipeline;
 const simState = new SimulationState();
 let starGroup,fabricMesh,lensingGroup,photonSystems=[];
@@ -677,53 +847,68 @@ let cameraAngle=0,cameraPitch=0.55,cameraDist=70;
 let isDrag=false,lastMX=0,lastMY=0;
 let userZoomed=false, userZoomTimer=0;
 let currentPhase=0,phaseTime=0,flashIntensity=0;
-// 10 phases: MainSeq, RedGiant, Supernova, NeutronStar, Jets, BH, Consume, Hawking, Explode, Nebula
 const PHASE_DURATIONS=[10, 8, 5, 8, 7, 6, 50, 14, 5, 30];
 let consumedCount=0;
 let shockwaveRing=null,shockwave2=null;
 let explosionParticles=null,dustParticles=null,nebulaShells=[],hawkingParticles=null;
-// New systems
 let neutronStarGroup=null, jetParticles=null, jetParticles2=null, photonSphereRing=null, ergosphereShell=null;
-//PHYSICS CONSTANTS (scaled for simulation)
+
+// PLAY/PAUSE STATE
+let isPaused = false;
+
+function togglePause() {
+  isPaused = !isPaused;
+  const btnEl = document.getElementById('play-pause-btn');
+  const pauseIcon = document.getElementById('pp-icon-pause');
+  const playIcon = document.getElementById('pp-icon-play');
+  if (isPaused) {
+    btnEl.classList.add('paused');
+    pauseIcon.style.display = 'none';
+    playIcon.style.display = '';
+    btnEl.title = 'Play';
+  } else {
+    btnEl.classList.remove('paused');
+    pauseIcon.style.display = '';
+    playIcon.style.display = 'none';
+    btnEl.title = 'Pause';
+    // Reset clock delta so we don't get a big jump
+    clock.getDelta();
+  }
+}
+
 const PHYS = {
-  // Stellar evolution
-  M_PROGENITOR: 25,        // Solar masses
-  T_MAIN_SEQ: 15e6,        // Core temp K (pp-chain → CNO at ~17MK)
-  T_HE_FLASH: 2e8,         // He's burning (triple-alpha)
-  T_SI_BURN: 3.5e9,        // Silicon burning → Fe core
-  CHANDRASEKHAR: 1.44,     // M☉, effective for Y_e ≈ 0.42 → ~1.26 M☉
-  // Neutron star
-  NS_MASS: 1.8,            // M☉ (proto-NS)
-  NS_RADIUS_KM: 12,        // NICER constraint
-  NS_B_FIELD: 1e12,        // Gauss (normal pulsar)
-  NS_PERIOD: 0.033,        // seconds (Crab-like)
-  NS_TEMP: 1e11,           // K (proto-NS, cools to ~1e6)
-  NS_COMPACTNESS: 0.17,    // GM/(Rc²) — 80% surface visible
-  TOV_LIMIT: 2.3,          // M☉ (collapse threshold)
-  // Black hole (Kerr)
-  M_BH: 10,                // Solar masses
-  SPIN: 0.7,               // a/M dimensionless spin parameter
-  R_S: 29.54,              // km, Schwarzschild radius
-  R_PHOTON: 44.31,         // km, photon sphere (3M for Schwarzschild)
-  R_ISCO: 53.2,            // km, ISCO for a=0.7 prograde (≈3.6M)
-  R_ERGO: 29.54,           // km, ergosphere equatorial = 2M always
-  EFFICIENCY: 0.10,        // η ≈ 10% for a=0.7
-  // Hawking radiation
-  T_HAWKING: 6.17e-9,      // K for 10 M☉ (essentially invisible)
-  LAMBDA_PEAK_KM: 470,     // Peak wavelength ~470 km (radio)
-  P_HAWKING: 9.0e-30,      // Watts (practically zero)
-  T_EVAP_YR: 1.16e70,      // Years to evaporate
-  // Jets (Blandford-Znajek)
-  JET_GAMMA: 5,            // Lorentz factor (microquasar)
-  JET_HALF_ANGLE: 11.5,    // degrees ≈ 1/Γ
-  JET_SPEED: 0.98,         // v/c
-  // Supernova
-  E_NEUTRINO: 3e53,        // ergs total neutrino emission
-  E_KINETIC: 1e51,         // ergs (1 foe)
-  T_BOUNCE_MS: 0,          // core bounce at t=0
-  T_STALL_MS: 15,          // shock stalls
-  T_REVIVAL_MS: 400,       // neutrino-driven revival
-  FE_PHOTODISINT_MEV: 124, // MeV per ⁵⁶Fe nucleus
+  M_PROGENITOR: 25,
+  T_MAIN_SEQ: 15e6,
+  T_HE_FLASH: 2e8,
+  T_SI_BURN: 3.5e9,
+  CHANDRASEKHAR: 1.44,
+  NS_MASS: 1.8,
+  NS_RADIUS_KM: 12,
+  NS_B_FIELD: 1e12,
+  NS_PERIOD: 0.033,
+  NS_TEMP: 1e11,
+  NS_COMPACTNESS: 0.17,
+  TOV_LIMIT: 2.3,
+  M_BH: 10,
+  SPIN: 0.7,
+  R_S: 29.54,
+  R_PHOTON: 44.31,
+  R_ISCO: 53.2,
+  R_ERGO: 29.54,
+  EFFICIENCY: 0.10,
+  T_HAWKING: 6.17e-9,
+  LAMBDA_PEAK_KM: 470,
+  P_HAWKING: 9.0e-30,
+  T_EVAP_YR: 1.16e70,
+  JET_GAMMA: 5,
+  JET_HALF_ANGLE: 11.5,
+  JET_SPEED: 0.98,
+  E_NEUTRINO: 3e53,
+  E_KINETIC: 1e51,
+  T_BOUNCE_MS: 0,
+  T_STALL_MS: 15,
+  T_REVIVAL_MS: 400,
+  FE_PHOTODISINT_MEV: 124,
 };
 
 const PD=[
@@ -752,7 +937,6 @@ function init(){
   renderer.outputEncoding=THREE.sRGBEncoding;
   document.body.appendChild(renderer.domElement);
   clock=new THREE.Clock();
-  // Initialize bloom
   pipeline = new AdvancedPipeline(renderer, innerWidth * Math.min(devicePixelRatio,2), innerHeight * Math.min(devicePixelRatio,2));
   pipeline.initLensing(innerWidth * Math.min(devicePixelRatio,2), innerHeight * Math.min(devicePixelRatio,2));
   buildRealisticStarfield();buildStar();buildFabric();buildPlanets();buildPhotons();buildLensing();
@@ -765,39 +949,29 @@ function init(){
 }
 
 function buildRealisticStarfield(){
-  // REALISTIC STARFIELD: Spectral classes O/B/A/F/G/K/M,
-  // magnitude-weighted sizes, Milky Way band density, scintillation
-  // Stars placed at 80-300 range so they're visible behind BH for lensing
   const N=22000;
   const pos=new Float32Array(N*3),col=new Float32Array(N*3),sz=new Float32Array(N);
   const twP=new Float32Array(N),twS=new Float32Array(N);
-  // Spectral class colors (B-V → RGB)
   const SC=[[.62,.69,1],[.68,.76,1],[.85,.88,1],[1,.97,.9],[1,.93,.73],[1,.8,.5],[1,.6,.35]];
-  // Distribution: M-type dominates, O/B rare
   const SW=[.003,.01,.03,.06,.12,.18,.597];
   const CW=[];let cw=0;for(const w of SW){cw+=w;CW.push(cw);}
   for(let i=0;i<N;i++){
     const r=80+Math.random()*320;
     const th=Math.random()*Math.PI*2;
-    // Milky Way concentration: more stars near galactic equator
     let ph;const mw=Math.random();
     if(mw<0.35) ph=Math.PI/2+(Math.random()-.5)*.4;
     else if(mw<0.55) ph=Math.PI/2+(Math.random()-.5)*1.0;
     else ph=Math.acos(2*Math.random()-1);
     pos[i*3]=r*Math.sin(ph)*Math.cos(th);pos[i*3+1]=r*Math.sin(ph)*Math.sin(th);pos[i*3+2]=r*Math.cos(ph);
-    // Spectral class selection
     const rnd=Math.random();let ci=6;
     for(let c=0;c<CW.length;c++){if(rnd<CW[c]){ci=c;break;}}
     const bc=SC[ci];const v=.05;
     col[i*3]=bc[0]+(Math.random()-.5)*v;col[i*3+1]=bc[1]+(Math.random()-.5)*v;col[i*3+2]=bc[2]+(Math.random()-.5)*v;
-    // Apparent magnitude distribution (power law: few bright, many faint)
-    // Boosted sizes for visibility behind BH lensing
     const mr=Math.random();
-    if(mr<.008) sz[i]=3.5+Math.random()*2.5;      // mag 0-1 (very bright)
-    else if(mr<.05) sz[i]=2.0+Math.random()*1.8;   // mag 1-3
-    else if(mr<.20) sz[i]=1.0+Math.random()*1.2;    // mag 3-5
-    else sz[i]=.3+Math.random()*.8;                  // mag 5+ (majority, but still visible)
-    // Milky Way band: slightly dimmer/redder (interstellar reddening)
+    if(mr<.008) sz[i]=3.5+Math.random()*2.5;
+    else if(mr<.05) sz[i]=2.0+Math.random()*1.8;
+    else if(mr<.20) sz[i]=1.0+Math.random()*1.2;
+    else sz[i]=.3+Math.random()*.8;
     if(mw<.35){sz[i]*=.7;col[i*3]*=1.05;col[i*3+1]*=.95;col[i*3+2]*=.85;}
     twP[i]=Math.random()*Math.PI*2;twS[i]=.3+Math.random()*2.5;
   }
@@ -815,7 +989,6 @@ function buildRealisticStarfield(){
       uniform float uTime;
       void main(){
         vC=color;
-        // Multi-frequency scintillation (atmospheric turbulence simulation)
         float t1=sin(uTime*twinkleSpeed+twinklePhase)*.12;
         float t2=sin(uTime*twinkleSpeed*2.7+twinklePhase*1.3)*.06;
         float t3=sin(uTime*twinkleSpeed*.4+twinklePhase*.7)*.08;
@@ -828,27 +1001,22 @@ function buildRealisticStarfield(){
       varying vec3 vC; varying float vTw;
       void main(){
         float d=length(gl_PointCoord-.5)*2.;
-        // Airy disk: sharp core + diffuse halo
         float core=exp(-d*d*6.);
         float halo=exp(-d*d*1.5)*.35;
-        // 4-point diffraction spikes for bright stars
         vec2 uv=gl_PointCoord-.5;
         float spike=exp(-abs(uv.x)*18.)*exp(-abs(uv.y)*60.)
                    +exp(-abs(uv.y)*18.)*exp(-abs(uv.x)*60.);
         spike*=.18;
         float a=(core+halo+spike)*vTw;
-        // Brighter output for lensing visibility
         gl_FragColor=vec4(vC*(1.2+core*.6),a);
       }`,
     transparent:true,depthWrite:false,blending:THREE.AdditiveBlending});
   scene.add(new THREE.Points(g,m));scene.userData.sfMat=m;
 }
 
-// STAR: FBM plasma noise + limb darkening
 function buildStar(){
   starGroup=new THREE.Group();
   const cG=new THREE.SphereGeometry(1,64,64);
-  // Star core with FBM plasma + limb darkening
   const cM=new THREE.ShaderMaterial({uniforms:{uTime:{value:0},uRadius:{value:3},uColor:{value:new THREE.Vector3(1,0.85,0.3)},uCollapse:{value:0},uBH:{value:0}},
     vertexShader: NOISE_GLSL + `
       uniform float uTime,uRadius,uBH;
@@ -856,11 +1024,10 @@ function buildStar(){
       void main(){
         vN=normalize(normalMatrix*normal);
         vec3 p=position*uRadius;
-        // FBM displacement for solar surface convection cells
         float disp = fbm(position * 4.0 + uTime * 0.3) * 0.12 * uRadius * (1.0 - uBH);
         disp += snoise(position * 8.0 + uTime * 0.8) * 0.04 * uRadius * (1.0 - uBH);
         p += normal * disp;
-        vWorldPos = position; // unit sphere coords for noise lookup
+        vWorldPos = position;
         vP=(modelViewMatrix*vec4(p,1.)).xyz;
         gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.);
       }`,
@@ -869,51 +1036,35 @@ function buildStar(){
       uniform vec3 uColor;
       varying vec3 vN,vP,vWorldPos;
       void main(){
-        // Black hole rendering
         if(uBH>0.95){
           float f=pow(1.-abs(dot(normalize(-vP),vN)),3.5);
           vec3 r=mix(vec3(.3,0.,.6),vec3(0.,.4,1.),sin(uTime*1.5)*.5+.5);
           gl_FragColor=vec4(r*f*2.,.97-f*.2);return;
         }
-        // === LIMB DARKENING (Claret quadratic law) ===
-        // I(μ)/I(1) = 1 - u₁(1-μ) - u₂(1-μ)² 
-        // Solar: u₁ ≈ 0.65, u₂ ≈ 0.0 (from Claret 2000 tables)
         vec3 viewDir = normalize(-vP);
         float cosTheta = abs(dot(viewDir, vN));
         float mu = cosTheta;
         float limbDark = 1.0 - 0.65*(1.0-mu);
-        // === FBM PLASMA ===
-        // Large-scale convection cells
         float n1 = fbm(vWorldPos * 3.0 + uTime * 0.15);
-        // Medium granulation
         float n2 = fbm(vWorldPos * 8.0 + uTime * 0.4);
-        // Fine detail — sunspots & filaments
         float n3 = turbulence(vWorldPos * 16.0 + uTime * 0.6);
-        // Compose plasma
         float plasma = n1 * 0.5 + n2 * 0.3 + n3 * 0.2 + 0.5;
-        // Hot bright spots (granule centers)
         float hotSpots = smoothstep(0.55, 0.8, plasma);
-        // Dark lanes (intergranular lanes)
         float darkLanes = smoothstep(0.3, 0.45, plasma);
         vec3 c = uColor;
-        // Temperature variation across surface
-        vec3 hotColor = vec3(1.0, 0.97, 0.85); // near-white hot
-        vec3 coolColor = uColor * 0.6;         // dimmer orange
+        vec3 hotColor = vec3(1.0, 0.97, 0.85);
+        vec3 coolColor = uColor * 0.6;
         c = mix(coolColor, c, darkLanes);
         c = mix(c, hotColor, hotSpots * 0.7);
-        // Sunspot-like dark patches (when plasma is very low)
         float sunspots = smoothstep(0.2, 0.15, n1 * 0.5 + n2 * 0.5 + 0.5);
         c = mix(c, vec3(0.3, 0.1, 0.02), sunspots * 0.6);
         c *= limbDark;
-        // Collapse coloring
         c = mix(c, vec3(1.0, 0.15, 0.0), uCollapse * 0.7);
-        // HDR boost for bloom to catch
         c *= 1.5;
         gl_FragColor=vec4(c,1.0);
       }`,
   });starGroup.add(new THREE.Mesh(cG,cM));starGroup.userData.coreMat=cM;
 
-  // Corona glow (also with limb contribution)
   const gG=new THREE.SphereGeometry(1,32,32);
   const gM=new THREE.ShaderMaterial({uniforms:{uTime:{value:0},uScale:{value:5},uColor:{value:new THREE.Vector3(1,0.65,0.15)},uBH:{value:0},uOpacity:{value:0.6}},
     vertexShader:`uniform float uScale;varying vec3 vN,vP;void main(){vN=normalize(normalMatrix*normal);vec3 p=position*uScale;
@@ -922,7 +1073,6 @@ function buildStar(){
       uniform float uTime,uBH,uOpacity;uniform vec3 uColor;varying vec3 vN,vP;
       void main(){
         float f=pow(1.-abs(dot(normalize(-vP),vN)),mix(2.5,4.5,uBH));
-        // FBM noise for corona wisps
         vec3 noiseCoord = normalize(vP) * 2.0 + uTime * 0.1;
         float coronaNoise = fbm(noiseCoord) * 0.5 + 0.5;
         f *= (0.7 + coronaNoise * 0.6);
@@ -933,16 +1083,11 @@ function buildStar(){
     transparent:true,side:THREE.BackSide,depthWrite:false,blending:THREE.AdditiveBlending});
   starGroup.add(new THREE.Mesh(gG,gM));starGroup.userData.glowMat=gM;
 
-  // ACCRETION DISK: Novikov-Thorne temperature, exact Keplerian velocity,
-  // gravitational redshift g-factor, Doppler D³ beaming
-  // Inner edge at ISCO: r_ISCO ≈ 3.6M for a/M=0.7 (in sim units, ~2.16 since r_s≈1.2 visual)
-  const ISCO_SIM = 2.5; // Simulation units mapping r_ISCO
+  const ISCO_SIM = 2.5;
   const dG=new THREE.RingGeometry(ISCO_SIM, 16, 256, 12);
   const dM=new THREE.ShaderMaterial({uniforms:{
     uTime:{value:0},uOpacity:{value:0},uCamPos:{value:new THREE.Vector3()},
-    uMass:{value:10.0}, // M in solar masses (drives all GR computations)
-    uSpin:{value:0.7},  // a/M dimensionless spin
-    uISCO:{value:ISCO_SIM},
+    uMass:{value:10.0},uSpin:{value:0.7},uISCO:{value:ISCO_SIM},
   },
     vertexShader:`
       varying vec2 vUv;
@@ -955,8 +1100,7 @@ function buildStar(){
         float r=length(p.xy);
         vR=r;
         vWorldPos = (modelMatrix * vec4(p, 1.0)).xyz;
-        // Disk vertical oscillation — thin disk (H/R << 1)
-        float H_over_R = 0.02; // Thin disk aspect ratio
+        float H_over_R = 0.02;
         p.z=sin(atan(p.y,p.x)*6.+uTime*3./(r*.5+1.))*r*H_over_R*(1.-smoothstep(uISCO,uISCO+1.5,r));
         gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.);
       }`,
@@ -966,86 +1110,47 @@ function buildStar(){
       varying vec3 vWorldPos;
       uniform float uTime, uOpacity, uMass, uSpin, uISCO;
       uniform vec3 uCamPos;
-
-      // Planck spectrum peak → color temperature mapping
-      // Wien's law: λ_peak = 2898/T μm → maps to visible color
       vec3 blackbodyColor(float T){
-        // Attempt physically-motivated mapping:
-        // T < 3000K → deep red, 3000-5000 → orange, 5000-7000 → white,
-        // 7000-15000 → blue-white, >15000 → blue
         float t = clamp((T - 1000.0) / 30000.0, 0.0, 1.0);
-        vec3 cold = vec3(0.6, 0.05, 0.0);    // ~1500K deep red
-        vec3 warm = vec3(1.0, 0.45, 0.05);   // ~4000K orange
-        vec3 hot  = vec3(1.0, 0.95, 0.85);   // ~7000K white
-        vec3 vhot = vec3(0.65, 0.75, 1.0);   // ~20000K blue-white
+        vec3 cold = vec3(0.6, 0.05, 0.0);
+        vec3 warm = vec3(1.0, 0.45, 0.05);
+        vec3 hot  = vec3(1.0, 0.95, 0.85);
+        vec3 vhot = vec3(0.65, 0.75, 1.0);
         vec3 c = mix(cold, warm, smoothstep(0.0, 0.1, t));
         c = mix(c, hot, smoothstep(0.1, 0.25, t));
         c = mix(c, vhot, smoothstep(0.25, 0.8, t));
         return c;
       }
-
       void main(){
-        // r in simulation units; map to gravitational radii
-        // r_sim = ISCO_SIM maps to r_ISCO = 3.6 r_g for a=0.7
-        float r_g = vR / uISCO * 3.6; // radius in units of r_g = GM/c²
-        float rn = (vR - uISCO) / (16.0 - uISCO); // 0→1 normalized
-
-        // === NOVIKOV-THORNE TEMPERATURE PROFILE ===
-        // T(r) = T_peak × (r_ISCO/r)^(3/4) × f(r) where f captures the zero-torque boundary
-        // Simplified: T(r) ∝ r^(-3/4) × [1 - √(r_ISCO/r)]^(1/4)
-        float r_ratio = max(r_g / 3.6, 1.0); // r/r_ISCO
+        float r_g = vR / uISCO * 3.6;
+        float rn = (vR - uISCO) / (16.0 - uISCO);
+        float r_ratio = max(r_g / 3.6, 1.0);
         float boundaryFactor = pow(max(0.0, 1.0 - 1.0/sqrt(r_ratio)), 0.25);
         float T_profile = pow(r_ratio, -0.75) * boundaryFactor;
-        // Peak temperature for 10 M☉ at 10% Eddington: ~5×10⁶ K
-        float T_physical = 5.0e6 * T_profile; // Kelvin
-
-        // === EXACT KEPLERIAN VELOCITY (Schwarzschild approx) ===
-        // β = √(M/r) / √(1 - 3M/r) where M/r = 1/(2*r_g) in geometric units
-        // For r in units of r_g: β = 1/√(2*r_g) / √(1 - 3/(2*r_g))
-        float M_over_r = 0.5 / max(r_g, 1.5); // GM/(rc²)
+        float T_physical = 5.0e6 * T_profile;
+        float M_over_r = 0.5 / max(r_g, 1.5);
         float beta = sqrt(M_over_r) / sqrt(max(1.0 - 3.0 * M_over_r, 0.01));
-        beta = min(beta, 0.95); // Cap below c
-
-        // === GRAVITATIONAL REDSHIFT g-FACTOR ===
-        // g = √(1 - r_s/r) = √(1 - 2M/r) = √(1 - 1/r_g) for r in units of r_g
+        beta = min(beta, 0.95);
         float g_redshift = sqrt(max(1.0 - 1.0/max(r_g, 1.01), 0.01));
-
-        // === RELATIVISTIC DOPPLER BEAMING ===
         vec2 posXY = vWorldPos.xy;
         float angle = atan(posXY.y, posXY.x);
-        // Tangent direction (prograde orbit, counter-clockwise)
         vec3 velDir = vec3(-sin(angle), cos(angle), 0.0);
         vec3 toCamera = normalize(uCamPos - vWorldPos);
         float cosTheta = dot(velDir, toCamera);
-        // Doppler factor: D = 1/[γ(1 - β cosθ)]
         float gamma = 1.0 / sqrt(max(1.0 - beta * beta, 0.001));
         float D = 1.0 / (gamma * (1.0 - beta * cosTheta));
-        // Observed intensity: I_obs = D³ × g⁴ × I_emit (D³ for discrete source, g⁴ for redshift)
         float beaming = D * D * D * g_redshift * g_redshift;
-        // Frequency shift for color: ν_obs = D × g × ν_emit
         float freqShift = D * g_redshift;
-
-        // === COLOR FROM TEMPERATURE ===
-        // Shift observed temperature by Doppler+grav: T_obs = freqShift × T_physical
         float T_observed = T_physical * freqShift;
         vec3 baseColor = blackbodyColor(T_observed);
-
-        // === FBM TURBULENCE (MHD instabilities in disk) ===
         vec3 noiseP = vec3(posXY * 0.3, uTime * 0.15);
         float diskNoise = fbm(noiseP + vec3(angle * 2.0, vR * 0.5, uTime * 0.2));
         float spiralNoise = turbulence(vec3(angle * 3.0 + uTime * 0.5, vR * 0.8, uTime * 0.1));
         baseColor *= 0.75 + 0.25 * (diskNoise * 0.5 + 0.5);
-        // Spiral density waves (gravitational instability)
         float spiralArm = 0.7 + 0.3 * sin(angle * 2.0 + log(max(vR, 0.1)) * 4.0 - uTime * 1.5);
         baseColor *= spiralArm;
-
-        // Apply beaming intensity
         baseColor *= clamp(beaming, 0.08, 5.0);
-
-        // Alpha: sharp cutoff at ISCO, gradual fade at outer edge
         float a = smoothstep(0.0, 0.03, rn) * (1.0 - smoothstep(0.75, 1.0, rn)) * 0.85;
-
-        // HDR output for bloom
         gl_FragColor = vec4(baseColor * 1.5, a * uOpacity);
       }`,
     transparent:true,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending});
@@ -1055,57 +1160,42 @@ function buildStar(){
 
 function buildFabric(){
   const g=new THREE.PlaneGeometry(120,120,180,180);g.rotateX(-Math.PI/2);
-  // Planet position+mass uniforms: vec4(x, z, mass, active) for each of 8 planets
   const planetWells = [];
   for(let i=0;i<8;i++) planetWells.push(new THREE.Vector4(0,0,0,0));
   const m=new THREE.ShaderMaterial({uniforms:{uTime:{value:0},uMass:{value:1},uPlanetWells:{value:planetWells}},
     vertexShader:`uniform float uTime,uMass;uniform vec4 uPlanetWells[8];varying vec2 vUv;varying float vDepth,vDist;
       void main(){vUv=uv;vec3 p=position;float d=length(p.xz);
-        // Central mass curvature
         float depth=-uMass*3.5/(d+0.6)+sin(d-uTime*1.8)*0.12/(d*0.25+1.)*uMass;
-        // Per-planet spacetime wells (each planet curves its local fabric)
         for(int i=0;i<8;i++){
           vec4 pw=uPlanetWells[i];
-          if(pw.w<0.5) continue; // inactive/consumed
+          if(pw.w<0.5) continue;
           float pd=length(p.xz-pw.xy);
-          // Planet well depth: scaled by gmass, localized with a soft falloff
-          // Jupiter's well should be visible but much smaller than the star's
-          float wellScale=pw.z*0.0008; // gmass scaling factor
+          float wellScale=pw.z*0.0008;
           depth+=-wellScale*2.5/(pd+0.3);
         }
         p.y=depth;
         vDepth=p.y;vDist=d;gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.);}`,
     fragmentShader:`varying vec2 vUv;varying float vDepth,vDist;uniform float uTime,uMass;
       void main(){
-        // ═══ HIGH CONTRAST GRID ═══
-        // Primary grid (coarse)
         vec2 gCoarse=abs(fract(vUv*40.)-0.5);
         float lineCoarse=min(gCoarse.x,gCoarse.y);
         float gridCoarse=1.-smoothstep(0.,0.04,lineCoarse);
-        // Secondary grid (fine) — subtle subdivision
         vec2 gFine=abs(fract(vUv*120.)-0.5);
         float lineFine=min(gFine.x,gFine.y);
         float gridFine=1.-smoothstep(0.,0.06,lineFine);
-        // Node dots at coarse grid intersections
         float nodeX=1.-smoothstep(0.,0.08,gCoarse.x);
         float nodeY=1.-smoothstep(0.,0.08,gCoarse.y);
         float nodes=nodeX*nodeY;
-        // Curvature depth coloring — much more vibrant
         float t=clamp(-vDepth/(uMass*3.5+1.5),0.,1.);
-        vec3 cFlat=vec3(0.05,.55,.85);         // flat: bright cyan
-        vec3 cMid=vec3(.55,.2,1.);              // mid: vivid purple
-        vec3 cDeep=vec3(1.,.2,.65);              // deep: hot pink
+        vec3 cFlat=vec3(0.05,.55,.85);
+        vec3 cMid=vec3(.55,.2,1.);
+        vec3 cDeep=vec3(1.,.2,.65);
         vec3 c=mix(cFlat,cMid,smoothstep(0.,.45,t));
         c=mix(c,cDeep,smoothstep(.45,1.,t));
-        // Boost brightness near curvature center
         c*=1.0+t*1.2;
-        // Alpha: coarse grid strong, fine grid subtle, nodes bright
         float a=gridCoarse*(0.25+0.7*t) + gridFine*0.04*(1.+t*2.) + nodes*0.5*(0.3+t);
-        // Base ambient glow across entire fabric
         a+=0.02+0.04*t;
-        // Pulsing
         a*=0.85+0.15*sin(uTime*0.4);
-        // Distance fade — push further out
         a*=1.-smoothstep(40.,60.,vDist);
         gl_FragColor=vec4(c,a);
       }`,
@@ -1113,7 +1203,6 @@ function buildFabric(){
   fabricMesh=new THREE.Mesh(g,m);fabricMesh.position.y=-3;scene.add(fabricMesh);
 }
 
-// PLANETS: FBM atmospheres + limb darkening per planet type
 function buildPlanets(){
   PD.forEach((pd,i)=>{const grp=new THREE.Group();
     const m=new THREE.ShaderMaterial({
@@ -1136,41 +1225,30 @@ function buildPlanets(){
           vLocal = position;
           vec3 p = position;
           vStretchFactor = 0.0;
-          // Gas giant atmospheric turbulence (when not being stretched)
           if(uPlanetType > 0.5 && uStretch < 0.1){
             float atmoDisp = fbm(position * 6.0 + vec3(0.0, uTime * 0.2, 0.0)) * 0.015;
             p += normal * atmoDisp;
           }
-          // === ENHANCED SPAGHETTIFICATION ===
           if(uStretch > 0.0){
-            // Project position onto BH direction
             float proj = dot(p, uBHDir);
             vec3 radial = uBHDir * proj;
             vec3 lateral = p - radial;
-            // Tidal gradient: stronger stretch at extremities
             float tidalGrad = 1.0 + abs(proj) * uStretch * 1.5;
-            // Radial stretch increases with distance from center (differential gravity)
             float stretchFactor = 1.0 + uStretch * 4.0 * tidalGrad;
-            // Lateral compression: squeeze harder as stretch increases
             float squeezeFactor = 1.0 / (1.0 + uStretch * 3.0);
             p = radial * stretchFactor + lateral * squeezeFactor;
             vStretchFactor = uStretch;
-            // FBM turbulent breakup at moderate stretch
             if(uStretch > 0.3){
               float breakup = smoothstep(0.3, 0.8, uStretch);
-              // Multi-octave displacement for chaotic tearing
               float tear1 = fbm(position * 12.0 + uTime * 0.5) * breakup * 0.25;
               float tear2 = snoise(position * 20.0 + uTime * 0.8) * breakup * 0.15;
               float tear3 = turbulence(position * 8.0 + uTime * 0.3) * breakup * 0.1;
               p += normal * (tear1 + tear2);
-              // Lateral scatter: chunks separating from the stream
               vec3 lateralDir = normalize(lateral + vec3(0.001));
               p += lateralDir * tear3 * (0.5 + 0.5 * sin(proj * 15.0));
             }
-            // High stretch: vertex scatter toward dissolution
             if(uStretch > 0.65){
               float scatter = smoothstep(0.65, 1.0, uStretch);
-              // FBM-driven scatter direction (not uniform)
               vec3 scatterDir = normalize(vec3(
                 snoise(position * 10.0 + 100.0),
                 snoise(position * 10.0 + 200.0),
@@ -1179,15 +1257,12 @@ function buildPlanets(){
               p += scatterDir * scatter * 0.6 * (0.3 + turbulence(position * 6.0) * 0.7);
             }
           }
-          // FBM dissolution (final stage before consumption)
           if(uDissolve > 0.0){
             float dissNoise = fbm(position * 5.0 + uTime * 0.4);
             float dissPattern = turbulence(position * 8.0 + uTime * 0.6);
-            // Non-uniform dissolution: some chunks fly off first
             float dissAmount = uDissolve * (0.3 + dissNoise * 0.7);
             vec3 dissDir = normal + uBHDir * 0.5;
             p += dissDir * dissAmount * 1.5;
-            // Additional radial scatter for particle-like breakup
             p += normal * dissPattern * uDissolve * 0.5;
           }
           vN = normalize(normalMatrix * normal);
@@ -1203,22 +1278,16 @@ function buildPlanets(){
           vec3 viewDir = normalize(-vP);
           float NdotV = abs(dot(viewDir, vN));
           float diff = max(dot(vN, uLightDir), 0.0);
-
-          // === LIMB DARKENING ===
           float limbU = uPlanetType > 1.5 ? 0.5 : uPlanetType > 0.5 ? 0.7 : 0.35;
-          // Reduce limb darkening as planet heats up (emission dominates)
           float limbStrength = mix(limbU, limbU * 0.3, uHeat);
           float limbDark = 1.0 - limbStrength * (1.0 - pow(NdotV, 0.55));
-
           vec3 c;
           if(uPlanetType > 1.5){
-            // === ICE GIANT ===
             float bands = sin(vLocal.y * 12.0 + fbm(vLocal * 5.0 + uTime * 0.08) * 2.0) * 0.5 + 0.5;
             float iceNoise = fbm(vLocal * 8.0 + vec3(0.0, uTime * 0.05, 0.0));
             c = uColor * (0.8 + bands * 0.2);
             c = mix(c, uColor * 1.3, iceNoise * 0.3);
           } else if(uPlanetType > 0.5){
-            // === GAS GIANT ===
             float lat = vLocal.y;
             float bandDistort = fbm(vLocal * 3.0 + vec3(0.0, uTime * 0.06, 0.0));
             float bands = sin((lat + bandDistort * 0.15) * 18.0) * 0.5 + 0.5;
@@ -1230,65 +1299,44 @@ function buildPlanets(){
             c = mix(c, vec3(0.85, 0.35, 0.15), storms * 0.2 * smoothstep(0.6, 0.8, storms));
             c *= (0.9 + shear * 0.15);
           } else {
-            // === ROCKY PLANET ===
             float terrain = fbm(vLocal * 6.0 + 42.0);
             float detail = snoise(vLocal * 20.0) * 0.15;
             c = uColor * (0.85 + terrain * 0.3 + detail);
           }
-
-          // Apply lighting + limb darkening
           c *= (0.12 + diff * 0.88);
           c *= limbDark;
-
-          // Fresnel rim
           float fres = pow(1.0 - NdotV, 3.0);
           c += uColor * fres * 0.25;
-
-          // Atmospheric scattering rim for gas/ice giants
           if(uPlanetType > 0.5){
             vec3 atmoColor = uPlanetType > 1.5 ? vec3(0.4, 0.7, 0.9) : vec3(0.8, 0.6, 0.3);
             c += atmoColor * fres * 0.4;
           }
-
-          // === ENHANCED TIDAL HEATING with FBM cracks ===
           if(uHeat > 0.0){
-            // Fracture network: FBM-based crack pattern
             float crackBase = turbulence(vLocal * 15.0 + uTime * 0.2);
             float crackFine = turbulence(vLocal * 30.0 + uTime * 0.4);
-            // Sharp crack edges using smoothstep thresholding
             float cracks = smoothstep(0.35, 0.4, crackBase) * (1.0 - smoothstep(0.4, 0.45, crackBase));
             cracks += smoothstep(0.55, 0.6, crackFine) * (1.0 - smoothstep(0.6, 0.65, crackFine)) * 0.6;
-            // Wider glow around cracks
             float crackGlow = smoothstep(0.3, 0.5, crackBase) * 0.5;
-            // Heat color ramp: dark red → orange → yellow → white
-            vec3 heatCold = vec3(0.6, 0.05, 0.0);   // deep magma
-            vec3 heatMid  = vec3(1.0, 0.35, 0.02);   // orange lava
-            vec3 heatHot  = vec3(1.0, 0.85, 0.5);    // bright yellow
-            vec3 heatWhite = vec3(1.5, 1.3, 1.0);    // HDR white-hot
+            vec3 heatCold = vec3(0.6, 0.05, 0.0);
+            vec3 heatMid  = vec3(1.0, 0.35, 0.02);
+            vec3 heatHot  = vec3(1.0, 0.85, 0.5);
+            vec3 heatWhite = vec3(1.5, 1.3, 1.0);
             float heatT = uHeat;
             vec3 heatCol = mix(heatCold, heatMid, smoothstep(0.0, 0.4, heatT));
             heatCol = mix(heatCol, heatHot, smoothstep(0.4, 0.7, heatT));
             heatCol = mix(heatCol, heatWhite, smoothstep(0.7, 1.0, heatT));
-            // Apply cracks as emissive (they glow through the surface)
             float crackEmission = (cracks * 1.5 + crackGlow) * uHeat;
             c = mix(c, heatCol, crackEmission);
-            // Overall surface heating (subsurface glow)
             float surfaceHeat = uHeat * uHeat * 0.5;
             c += heatCol * surfaceHeat * (0.5 + 0.5 * fbm(vLocal * 4.0 + uTime * 0.15));
-            // Hot rim emission: edges glow when heated
             c += heatCol * fres * uHeat * 1.2;
           }
-
-          // === FBM DISSOLUTION ===
           float alpha = 1.0;
           if(uDissolve > 0.0){
-            // Multi-scale noise threshold for organic breakup
             float dissNoise = fbm(vLocal * 5.0 + uTime * 0.3) * 0.5 + 0.5;
             float dissFine = turbulence(vLocal * 12.0 + uTime * 0.5) * 0.5 + 0.5;
             float dissolveThreshold = dissNoise * 0.7 + dissFine * 0.3;
-            // Threshold-based alpha: pixels dissolve as uDissolve rises
             alpha = 1.0 - smoothstep(dissolveThreshold - 0.1, dissolveThreshold, uDissolve);
-            // Bright emission edge at dissolution boundary
             float edgeGlow = smoothstep(dissolveThreshold - 0.15, dissolveThreshold - 0.05, uDissolve)
                            * (1.0 - smoothstep(dissolveThreshold - 0.05, dissolveThreshold, uDissolve));
             c += vec3(1.5, 0.6, 0.1) * edgeGlow * 3.0;
@@ -1307,7 +1355,6 @@ function buildPlanets(){
     const oL=new THREE.Line(oG,new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:0.04}));
     oL.position.y=-3;oL.visible=show.orbits;scene.add(oL);scene.add(grp);
 
-    // Debris trail dense tidal stream
     const DN=1200;
     const dPos=new Float32Array(DN*3),dVel=new Float32Array(DN*3),dCol=new Float32Array(DN*3),dSz=new Float32Array(DN),dLife=new Float32Array(DN);
     for(let j=0;j<DN;j++){
@@ -1334,37 +1381,30 @@ function buildPlanets(){
         uniform vec3 uPlanetPos, uPlanetColor;
         varying vec3 vC; varying float vA, vAge;
         void main(){
-          // Staggered particle cycling
           float cycle = life * 1.8 + 0.5;
           float age = mod(uTime * (0.6 + life * 0.5), cycle) / cycle;
           vAge = age;
           vec3 start = uPlanetPos;
-          vec3 end = vec3(0.0, -3.0, 0.0); // target: center (BH) at fabric level
-          // Cubic acceleration: slow departure, violent arrival (gravity ~ 1/r²)
+          vec3 end = vec3(0.0, -3.0, 0.0);
           float accelT = age * age * age;
           vec3 p = mix(start, end, accelT);
-          // Keplerian spiral: angular velocity increases as debris approaches BH
           float spiralR = (1.0 - accelT) * 2.5 * life;
-          float spiralSpeed = 8.0 + 20.0 * accelT; // faster near BH
+          float spiralSpeed = 8.0 + 20.0 * accelT;
           float spiralA = age * spiralSpeed + life * 25.0;
           p.x += cos(spiralA) * spiralR * 0.35;
           p.z += sin(spiralA) * spiralR * 0.35;
-          // Vertical oscillation dampens as debris flattens into disk
           float diskFlatten = 1.0 - accelT * accelT;
           p.y += sin(age * 8.0 + life * 5.0) * diskFlatten * 0.8;
-          // FBM turbulence perturbation
           float turbDisp = snoise(vec3(age * 3.0, life * 10.0, uTime * 0.3)) * (1.0 - accelT) * 0.5;
           p.x += turbDisp;
           p.z += turbDisp * 0.7;
-          // Color ramp: planet color → heated orange → white-hot near BH
           vec3 coldCol = uPlanetColor * 0.8;
           vec3 warmCol = vec3(1.0, 0.5, 0.1);
-          vec3 hotCol = vec3(1.5, 1.2, 0.8); // HDR white-hot
+          vec3 hotCol = vec3(1.5, 1.2, 0.8);
           vC = mix(coldCol, warmCol, smoothstep(0.2, 0.6, accelT));
           vC = mix(vC, hotCol, smoothstep(0.6, 0.95, accelT));
-          // Fade: bright departure, bright arrival, dimmer in between
           float fadeMid = sin(age * 3.14159);
-          float fadeEnd = smoothstep(0.8, 1.0, age); // bright flash near BH
+          float fadeEnd = smoothstep(0.8, 1.0, age);
           vA = uAlpha * (fadeMid * 0.7 + fadeEnd * 0.8) * uActive;
           vec4 mv = modelViewMatrix * vec4(p, 1.0);
           gl_PointSize = size * (1.0 + accelT * 3.0) * (120.0 / -mv.z);
@@ -1374,10 +1414,8 @@ function buildPlanets(){
         varying vec3 vC; varying float vA, vAge;
         void main(){
           float d = length(gl_PointCoord - 0.5) * 2.0;
-          // Softer falloff for hot particles, sharper for cold
           float softness = mix(0.8, 0.5, vAge);
           float a = 1.0 - smoothstep(0.0, softness, d);
-          // Additive glow core
           float core = exp(-d * d * 4.0) * 0.5;
           gl_FragColor = vec4(vC * (1.5 + core), (a * a + core) * vA);
         }`,
@@ -1488,7 +1526,6 @@ function buildDust(){
   `varying vec3 vC;varying float vA;void main(){float d=length(gl_PointCoord-.5)*2.;float a=1.-smoothstep(0.,.85,d);gl_FragColor=vec4(vC,a*vA*0.7);}`);
 }
 
-// NEBULA: FBM volumetric clouds
 function buildNebula(){
   const data=[{r:8,c:[0.2,0.6,1],o:0.12},{r:14,c:[0.8,0.2,0.5],o:0.09},{r:20,c:[0.15,0.8,0.4],o:0.07},
     {r:26,c:[0.6,0.3,0.8],o:0.06},{r:10,c:[1,0.5,0.1],o:0.08},{r:17,c:[0.1,0.4,0.9],o:0.06}];
@@ -1500,14 +1537,11 @@ function buildNebula(){
         uniform float uTime,uAlpha,uBaseOp;uniform vec3 uColor;varying vec3 vN,vP,vW;
         void main(){
           float f=pow(1.-abs(dot(normalize(-vP),vN)),2.);
-          // FBM volumetric cloud structure
           float cloudDensity = fbm(vW * 0.15 + uTime * 0.05);
           float fineDetail = turbulence(vW * 0.4 + uTime * 0.08);
           float filaments = pow(abs(snoise(vW * 0.08 + uTime * 0.02)), 1.5);
-          // Compose nebula appearance
           float density = cloudDensity * 0.5 + fineDetail * 0.3 + filaments * 0.4 + 0.3;
           density = clamp(density, 0.0, 1.0);
-          // Color variation across nebula
           vec3 colorVar = uColor + vec3(
             snoise(vW * 0.05 + 10.0) * 0.15,
             snoise(vW * 0.05 + 20.0) * 0.15,
@@ -1515,7 +1549,6 @@ function buildNebula(){
           );
           vec3 c = colorVar * (1.0 + density * 0.5) + colorVar * f * 0.8;
           float a = clamp(f * uBaseOp * uAlpha * density, 0.0, 0.35);
-          // HDR for nebula glow
           gl_FragColor = vec4(c * 1.5, a);
         }`,
       transparent:true,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending});
@@ -1527,10 +1560,8 @@ function buildNebula(){
 
 function buildLights(){scene.add(new THREE.AmbientLight(0x111125,0.35));const p=new THREE.PointLight(0xffcc66,2.5,100);p.position.set(0,3,0);scene.add(p);scene.userData.mainLight=p;}
 
-// NEUTRON STAR: Rapidly spinning, pulsar beams, magnetic field lines
 function buildNeutronStar(){
   neutronStarGroup = new THREE.Group();
-  // Tiny ultra-dense core (NS is ~12km, but we scale to visual)
   const nsCore = new THREE.Mesh(
     new THREE.SphereGeometry(0.5, 48, 48),
     new THREE.ShaderMaterial({
@@ -1542,7 +1573,6 @@ function buildNeutronStar(){
           vN = normalize(normalMatrix * normal);
           vW = position;
           vec3 p = position * 0.5;
-          // Slight surface oscillation (starquakes)
           p += normal * snoise(position * 8.0 + uTime * 2.0) * 0.005;
           vP = (modelViewMatrix * vec4(p,1.0)).xyz;
           gl_Position = projectionMatrix * modelViewMatrix * vec4(p,1.0);
@@ -1553,21 +1583,16 @@ function buildNeutronStar(){
         void main(){
           vec3 viewDir = normalize(-vP);
           float NdotV = abs(dot(viewDir, vN));
-          // Limb darkening — NS compactness 0.17 means 80% visible
           float limbDark = 0.4 + 0.6 * pow(NdotV, 0.4);
-          // Surface: blue-white hot NS
           vec3 baseCol = mix(vec3(0.6, 0.7, 1.0), vec3(1.0, 0.95, 0.85), uTemp);
-          // Magnetic hotspots at poles
           float lat = asin(vW.y / length(vW));
           float hotspot = exp(-pow(abs(lat) - 1.4, 2.0) * 20.0);
           hotspot += exp(-pow(abs(lat) + 1.4, 2.0) * 20.0);
           vec3 hotCol = vec3(1.5, 1.3, 1.0);
           baseCol = mix(baseCol, hotCol, hotspot * 0.6);
-          // Surface detail
           float detail = fbm(vW * 20.0 + uTime * 0.5) * 0.15;
           baseCol *= (0.9 + detail);
           baseCol *= limbDark;
-          // HDR boost
           gl_FragColor = vec4(baseCol * 2.0, 1.0);
         }`,
     })
@@ -1575,7 +1600,6 @@ function buildNeutronStar(){
   neutronStarGroup.add(nsCore);
   neutronStarGroup.userData.coreMat = nsCore.material;
 
-  // Pulsar beam cones (bipolar)
   for(let sign = -1; sign <= 1; sign += 2){
     const beamGeo = new THREE.CylinderGeometry(0.05, 2.5, 25, 32, 1, true);
     const beamMat = new THREE.ShaderMaterial({
@@ -1585,12 +1609,9 @@ function buildNeutronStar(){
       fragmentShader:`uniform float uTime, uAlpha; varying vec2 vUv; varying float vY;
         void main(){
           float dist = abs(vY) / 12.5;
-          // Beam fades with distance, brighter at core
           float edge = 1.0 - abs(vUv.x - 0.5) * 2.0;
           float beam = pow(edge, 3.0) * (1.0 - dist * 0.7);
-          // Pulsing
           beam *= 0.7 + 0.3 * sin(uTime * 30.0 + dist * 5.0);
-          // Blue synchrotron color
           vec3 col = mix(vec3(0.3, 0.5, 1.0), vec3(0.8, 0.9, 1.0), edge);
           gl_FragColor = vec4(col * 2.0, beam * uAlpha * 0.6);
         }`,
@@ -1598,20 +1619,17 @@ function buildNeutronStar(){
     });
     const beam = new THREE.Mesh(beamGeo, beamMat);
     beam.position.y = sign * 12.5;
-    // Tilt beams relative to spin axis (magnetic/rotation axis misalignment ~15°)
     beam.rotation.z = sign > 0 ? 0.26 : -0.26;
     neutronStarGroup.add(beam);
     if(sign > 0) neutronStarGroup.userData.beam1Mat = beamMat;
     else neutronStarGroup.userData.beam2Mat = beamMat;
   }
 
-  // Magnetic field lines (dipole)
   for(let i = 0; i < 8; i++){
     const pts = [];
     const phi = (i / 8) * Math.PI * 2;
     for(let t = 0; t <= 1; t += 0.02){
       const theta = (t - 0.5) * Math.PI * 0.9;
-      // Dipole: r = r0 * cos²θ
       const r0 = 6;
       const r = r0 * Math.cos(theta) * Math.cos(theta);
       pts.push(new THREE.Vector3(
@@ -1630,24 +1648,20 @@ function buildNeutronStar(){
   scene.add(neutronStarGroup);
 }
 
-// RELATIVISTIC JETS: Blandford-Znajek bipolar outflow
 function buildJets(){
   const N = 4000;
   [1, -1].forEach((sign, idx) => {
     const pos=new Float32Array(N*3),vel=new Float32Array(N*3),col=new Float32Array(N*3),sz=new Float32Array(N),life=new Float32Array(N);
     for(let i=0;i<N;i++){
-      // Start near BH poles
       const r = 0.3 + Math.random() * 0.5;
       const a = Math.random() * Math.PI * 2;
       pos[i*3] = Math.cos(a) * r * 0.3;
       pos[i*3+1] = sign * (0.5 + Math.random() * 0.5);
       pos[i*3+2] = Math.sin(a) * r * 0.3;
-      // Velocity: mostly along jet axis, slight spread ≈ 1/Γ
-      const spread = (Math.random() - 0.5) * 0.2; // ~11° half-angle
+      const spread = (Math.random() - 0.5) * 0.2;
       vel[i*3] = spread;
-      vel[i*3+1] = sign * (3 + Math.random() * 8); // fast!
+      vel[i*3+1] = sign * (3 + Math.random() * 8);
       vel[i*3+2] = spread;
-      // Blue synchrotron color (confirmed by HST M87 jet observations)
       const t = Math.random();
       col[i*3] = 0.3 + t * 0.5;
       col[i*3+1] = 0.5 + t * 0.4;
@@ -1671,10 +1685,7 @@ function buildJets(){
           vC = color;
           float age = mod(uTime * (0.5 + life * 0.3), life * 2.0) / (life * 2.0);
           vec3 p = position + velocity * age * uTime * 0.3;
-          // Collimation: jet narrows then expands (1/Γ opening)
           float dist = abs(p.y);
-          // ═══ FRAME-DRAGGING TWIST ═══
-          // Ω_FD = 2Ma/(r³+a²r+2Ma²) — near BH, jets twist with ergosphere
           float frameDragAngle = uFrameDrag * 3.0 / (dist * dist + 1.0) * age * 8.0;
           float cosD = cos(frameDragAngle), sinD = sin(frameDragAngle);
           float px = p.x * cosD - p.z * sinD;
@@ -1683,11 +1694,9 @@ function buildJets(){
           float collimate = 1.0 + dist * 0.08;
           p.x *= collimate;
           p.z *= collimate;
-          // KH instability perturbation at boundary
           float kh = snoise(vec3(dist * 0.3, age * 5.0, life * 3.0)) * dist * 0.03;
           p.x += kh;
           p.z += kh;
-          // Knots: periodic bright regions (internal shocks)
           float knot = exp(-pow(mod(dist, 8.0) - 4.0, 2.0) * 0.5);
           vA = uAlpha * (0.4 + knot * 0.6) * (1.0 - age * 0.5) * uJetPower;
           vec4 mv = modelViewMatrix * vec4(p, 1.0);
@@ -1711,20 +1720,16 @@ function buildJets(){
   });
 }
 
-// PHOTON SPHERE + ERGOSPHERE (visible during BH phases)
 function buildPhotonSphere(){
-  // Photon sphere at r = 3M (unstable circular photon orbits)
-  const psGeo = new THREE.TorusGeometry(3.0, 0.02, 16, 128); // r_ph/r_s ≈ 1.5
+  const psGeo = new THREE.TorusGeometry(3.0, 0.02, 16, 128);
   const psMat = new THREE.ShaderMaterial({
     uniforms:{uTime:{value:0}},
     vertexShader:`varying vec3 vP; void main(){ vP=position; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
     fragmentShader:`uniform float uTime; varying vec3 vP;
       void main(){
         float angle = atan(vP.z, vP.x);
-        // Photons spiral and escape/capture — flickering ring
         float flicker = 0.5 + 0.5 * sin(angle * 8.0 + uTime * 12.0);
         float bright = 0.3 + flicker * 0.7;
-        // Lyapunov instability: e-folding per radian
         vec3 col = mix(vec3(1.0, 0.8, 0.3), vec3(1.0, 1.0, 1.0), flicker);
         gl_FragColor = vec4(col * bright * 1.5, bright * 0.4);
       }`,
@@ -1735,15 +1740,12 @@ function buildPhotonSphere(){
   photonSphereRing.visible = false;
   scene.add(photonSphereRing);
 
-  // Ergosphere (oblate ellipsoid, r_ergo = M + √(M²-a²cos²θ))
-  // At equator: 2M, at poles: r+ < 2M for spinning BH
   const ergoGeo = new THREE.SphereGeometry(4.0, 48, 48);
   const ergoMat = new THREE.ShaderMaterial({
     uniforms:{uTime:{value:0},uSpin:{value:PHYS.SPIN}},
     vertexShader:`uniform float uSpin; varying vec3 vN, vP;
       void main(){
         vec3 p = position;
-        // Oblate: equatorial bulge, poles compressed by spin
         float cosTheta = p.y / length(p);
         float ergoScale = 1.0 + uSpin * uSpin * (1.0 - cosTheta * cosTheta) * 0.3;
         p.xz *= ergoScale;
@@ -1754,7 +1756,6 @@ function buildPhotonSphere(){
     fragmentShader:`uniform float uTime, uSpin; varying vec3 vN, vP;
       void main(){
         float f = pow(1.0 - abs(dot(normalize(-vP), vN)), 4.0);
-        // Frame-dragging visualization: swirling pattern
         vec3 dir = normalize(vP);
         float drag = sin(atan(dir.z, dir.x) * 3.0 + uTime * 2.0 * uSpin) * 0.5 + 0.5;
         vec3 col = mix(vec3(0.2, 0.1, 0.5), vec3(0.5, 0.2, 1.0), drag);
@@ -1801,9 +1802,32 @@ function hookEvents(){
     e.preventDefault();
   },{passive:false});
   cv.addEventListener('touchend',()=>isDrag=false);
+
+  // Keyboard shortcut for play/pause
+  addEventListener('keydown', e => {
+    if(e.code === 'Space' && e.target === document.body){
+      e.preventDefault();
+      togglePause();
+    }
+  });
 }
 
-function showBanner(t,s){const b=document.getElementById('phase-banner');document.getElementById('phase-title').textContent=t;document.getElementById('phase-sub').textContent=s;b.classList.add('show');setTimeout(()=>b.classList.remove('show'),3500);}
+function showBanner(t,s){
+  const b=document.getElementById('phase-banner');
+  const eq=document.getElementById('equation');
+  document.getElementById('phase-title').textContent=t;
+  document.getElementById('phase-sub').textContent=s;
+  b.classList.add('show');
+  requestAnimationFrame(()=>{
+    const bannerRect = b.getBoundingClientRect();
+    const bannerBottom = bannerRect.top + bannerRect.height + 10;
+    eq.style.top = Math.max(145, bannerBottom) + 'px';
+  });
+  setTimeout(()=>{
+    b.classList.remove('show');
+    setTimeout(()=>{ eq.style.top = ''; }, 1200);
+  },3500);
+}
 
 function advancePhase(){currentPhase++;phaseTime=0;
   const B=[null,
@@ -1833,13 +1857,11 @@ function resetAll(){
   hawkingParticles.visible=false;explosionParticles.visible=false;dustParticles.visible=false;
   nebulaShells.forEach(ns=>{ns.mesh.visible=false;ns.mat.uniforms.uAlpha.value=0;});
   starGroup.visible=true;
-  // Reset new systems
   neutronStarGroup.visible=false;
   if(jetParticles) jetParticles.visible=false;
   if(jetParticles2) jetParticles2.visible=false;
   if(photonSphereRing) photonSphereRing.visible=false;
   if(ergosphereShell) ergosphereShell.visible=false;
-  // Reset equation displays
   document.getElementById('eq-hawking').style.display='none';
   document.getElementById('eq-kerr').style.display='none';
   document.getElementById('eq-ns').style.display='none';
@@ -1852,13 +1874,11 @@ function skipToPhase(p){resetAll();for(let i=0;i<p;i++)advancePhase();
   if(p>=1){star.radius=7;star.color=[1,0.35,0.08];star.mass=20;star.coronaScale=12.6;star.coronaColor=[1,0.2,0.1];}
   if(p>=2){star.radius=1;star.collapseT=1;star.mass=15;}
   if(p>=3){
-    // Neutron star phase
     starGroup.visible=false; neutronStarGroup.visible=true;
     star.mass=PHYS.NS_MASS; star.radius=0.5;
     document.getElementById('eq-ns').style.display='block';
   }
   if(p>=4){
-    // Jets phase — NS collapsed to BH, jets launching
     neutronStarGroup.visible=false; starGroup.visible=true;
     star.isBlackHole=true; star.bhGlow=0.5; star.accretionOpacity=0.7;
     star.mass=PHYS.M_BH; star.radius=2;
@@ -1866,7 +1886,6 @@ function skipToPhase(p){resetAll();for(let i=0;i<p;i++)advancePhase();
     document.getElementById('eq-bz').style.display='block';
   }
   if(p>=5){
-    // Full BH with Kerr geometry
     star.isBlackHole=true;star.bhGlow=1;star.accretionOpacity=1;star.mass=PHYS.M_BH;star.radius=2;
     lensingGroup.visible=true;
     jetParticles.visible=false; jetParticles2.visible=false;
@@ -1874,7 +1893,7 @@ function skipToPhase(p){resetAll();for(let i=0;i<p;i++)advancePhase();
     document.getElementById('eq-kerr').style.display='block';
     document.getElementById('eq-isco').style.display='block';
   }
-  if(p>=6){star.mass=PHYS.M_BH + 2;} // Accreted mass
+  if(p>=6){star.mass=PHYS.M_BH + 2;}
   if(p>=7){
     planets.forEach((pl,i)=>{pl.consumed=true;pl.group.visible=false;consumedCount++;document.getElementById(`ps-${i}`).classList.add('consumed');});
     star.isBlackHole=true;star.bhGlow=1;star.accretionOpacity=1;star.mass=PHYS.M_BH+2;star.radius=2;
@@ -1891,84 +1910,79 @@ function skipToPhase(p){resetAll();for(let i=0;i<p;i++)advancePhase();
 
 function tog(k,el){show[k]=!show[k];el.classList.toggle('on');}
 
+// 
 // MAIN ANIMATION LOOP
+// 
 function animate(){
   requestAnimationFrame(animate);
   speedMul=parseFloat(document.getElementById('sl-speed').value);
   waveFreq=parseInt(document.getElementById('sl-wave').value);
   const bloomStr = parseFloat(document.getElementById('sl-bloom').value);
   pipeline.strength = bloomStr;
-  const dt=clock.getDelta()*speedMul;simTime+=dt;phaseTime+=dt;
+
+  // When paused, consume the clock delta but don't advance simulation
+  const rawDt = clock.getDelta();
+  const dt = isPaused ? 0 : rawDt * speedMul;
+  simTime += dt;
+  phaseTime += dt;
+
   const pDur=PHASE_DURATIONS[currentPhase]||999,pP=Math.min(phaseTime/pDur,1);
 
-  // ═══ PHASE 0: MAIN SEQUENCE — H→He fusion, CNO cycle, L ∝ M^3.5 ═══
   if(currentPhase===0){
     star.radius=3+Math.sin(simTime*0.3)*0.1;
-    star.color=[1,0.85,0.3]; // ~5800K yellow for 25 M☉ (actually O-type blue but we start solar)
+    star.color=[1,0.85,0.3];
     star.coronaScale=star.radius*1.7;star.coronaColor=[1,0.65,0.15];
-    star.mass=25-pP*5; // Slight mass loss from stellar wind
-    star.temp=15+pP*25; // Core heats: 15→40 MK (CNO dominates above 17MK)
+    star.mass=25-pP*5;
+    star.temp=15+pP*25;
     neutronStarGroup.visible=false;
     if(pP>=1)advancePhase();
   }
-  //PHASE 1: RED GIANT — He flash, shell burning, onion layers ═══
   else if(currentPhase===1){
     const e=ease(pP);
-    star.radius=3+e*5; // Envelope expansion
-    star.color=[1,0.85-e*0.5,0.3-e*0.22]; // Yellow → Red
+    star.radius=3+e*5;
+    star.color=[1,0.85-e*0.5,0.3-e*0.22];
     star.coronaScale=star.radius*1.8;star.coronaColor=[1,0.4-e*0.2,0.1];
-    star.mass=20-e*5; // Mass loss via stellar wind (25→15 M☉)
-    // Temperature evolution through burning stages
-    // H-shell → He-core → C → Ne → O → Si → Fe
+    star.mass=20-e*5;
     const burnStage = Math.floor(e * 6);
     const temps = [2e8, 8e8, 1.2e9, 2e9, 3.5e9, 3.5e9];
     star.temp = temps[Math.min(burnStage, 5)] / 1e6;
     if(pP>=1)advancePhase();
   }
-  // PHASE 2: SUPERNOVA — Fe photodisintegration, core bounce, neutrino shock ═══
   else if(currentPhase===2){
     if(pP<0.15){
-      // Iron core collapse: free-fall in ~0.04-0.12s
-      // Fe + γ → 13⁴He + 4n absorbs 124 MeV/nucleus
       flashIntensity=ease(pP/0.15)*0.5;
-      star.radius=8*(1-pP*3); // Rapid contraction
+      star.radius=8*(1-pP*3);
       star.color=[1,0.6,0.3];
       star.mass=15;
     } else if(pP<0.3){
-      // Core bounce at nuclear density (2.7×10¹⁴ g/cm³)
-      // Shock stalls at ~150km, neutrino heating revives it
       const bt=(pP-0.15)/0.15;
-      flashIntensity=1.5+bt*2; // Neutrino burst flash
-      star.radius=2+bt*9; // Shock expansion
-      star.color=[1,1,0.9]; // White-hot
+      flashIntensity=1.5+bt*2;
+      star.radius=2+bt*9;
+      star.color=[1,1,0.9];
       star.mass=15;
       const swt=ease(bt);
       shockwaveRing.scale.set(1+swt*40,1+swt*40,1);
       shockwaveRing.material.opacity=Math.max(0,0.8-swt*0.5);
     } else {
-      // Envelope ejection, core collapse continues
       const ct=(pP-0.3)/0.7,c=ease(ct);
       star.radius=11*(1-c*0.9);
       star.collapseT=c;
       star.color=[1-c*0.5,0.5*(1-c),c*0.5];
       flashIntensity=Math.max(0,2-ct*3);
-      star.mass=15-c*13; // Ejects most mass, core → ~1.8 M☉
+      star.mass=15-c*13;
       const swt=Math.max(0,(ct-0.1)/0.9);
       shockwaveRing.scale.set(40+swt*60,40+swt*60,1);
       shockwaveRing.material.opacity=Math.max(0,0.5-swt*0.6);
     }
     if(pP>=1)advancePhase();
   }
-  // PHASE 3: NEUTRON STAR — Proto-NS, pulsar beams, B~10¹² G, TOV exceeded ═══
   else if(currentPhase===3){
     const t=ease(pP);
-    starGroup.visible=pP<0.05; // Star disappears, NS appears
+    starGroup.visible=pP<0.05;
     neutronStarGroup.visible=true;
     document.getElementById('eq-ns').style.display='block';
-    // NS spins up from conservation of angular momentum: P starts ~20ms
-    const nsPeriod = 0.02 + (1-t)*0.5; // Spinning up
-    neutronStarGroup.rotation.y += dt * (2*Math.PI / nsPeriod) * 0.02; // Visual spin
-    // Pulsar beams
+    const nsPeriod = 0.02 + (1-t)*0.5;
+    neutronStarGroup.rotation.y += dt * (2*Math.PI / nsPeriod) * 0.02;
     if(neutronStarGroup.userData.beam1Mat){
       neutronStarGroup.userData.beam1Mat.uniforms.uTime.value=simTime;
       neutronStarGroup.userData.beam1Mat.uniforms.uAlpha.value=0.3+t*0.7;
@@ -1977,20 +1991,17 @@ function animate(){
     }
     if(neutronStarGroup.userData.coreMat){
       neutronStarGroup.userData.coreMat.uniforms.uTime.value=simTime;
-      // Cooling: 10¹¹K → 10⁹K (neutrino cooling dominates)
       neutronStarGroup.userData.coreMat.uniforms.uTemp.value=1.0-t*0.7;
     }
-    star.mass=PHYS.NS_MASS + t*0.7; // Accreting fallback → exceeds TOV
-    star.temp=1e11/1e6*(1-t*0.9); // Cooling in MK
+    star.mass=PHYS.NS_MASS + t*0.7;
+    star.temp=1e11/1e6*(1-t*0.9);
     star.radius=0.5;
-    // At end: mass exceeds TOV limit → collapse to BH
     if(pP>0.85){
       flashIntensity = ease((pP-0.85)/0.15)*1.5;
       neutronStarGroup.visible = pP < 0.95;
     }
     if(pP>=1)advancePhase();
   }
-  // PHASE 4: RELATIVISTIC JETS — Blandford-Znajek, Poynting flux ═══
   else if(currentPhase===4){
     const t=ease(pP);
     neutronStarGroup.visible=false;
@@ -1999,7 +2010,6 @@ function animate(){
     star.accretionOpacity=t*0.8;
     star.mass=PHYS.M_BH;star.radius=2;star.collapseT=1;
     document.getElementById('eq-bz').style.display='block';
-    // Jets power up via BZ mechanism: P_BZ ∝ Φ²_BH × Ω²_H
     const jetPower = ease(Math.min(1,t*1.5));
     jetParticles.visible=true; jetParticles2.visible=true;
     jetParticles.material.uniforms.uTime.value=simTime;
@@ -2008,24 +2018,20 @@ function animate(){
     jetParticles2.material.uniforms.uTime.value=simTime;
     jetParticles2.material.uniforms.uAlpha.value=jetPower*0.8;
     jetParticles2.material.uniforms.uJetPower.value=jetPower;
-    // Accretion disk forms
     lensingGroup.visible=t>0.3;
     if(pP>=1)advancePhase();
   }
-  // ═══ PHASE 5: BLACK HOLE — Kerr metric, ergosphere, photon sphere, ISCO ═══
   else if(currentPhase===5){
     const t=ease(pP);
     star.isBlackHole=true;star.radius=2;star.bhGlow=1;
     star.accretionOpacity=1;star.mass=PHYS.M_BH;star.collapseT=1;
     lensingGroup.visible=true;
-    // Jets fade as MAD state stabilizes
     const jetFade = Math.max(0, 1-t*2);
     if(jetParticles.visible){
       jetParticles.material.uniforms.uAlpha.value=jetFade*0.5;
       jetParticles2.material.uniforms.uAlpha.value=jetFade*0.5;
       if(jetFade<0.01){jetParticles.visible=false;jetParticles2.visible=false;}
     }
-    // Show Kerr geometry
     document.getElementById('eq-kerr').style.display='block';
     document.getElementById('eq-isco').style.display='block';
     photonSphereRing.visible=true;
@@ -2036,62 +2042,44 @@ function animate(){
       ergosphereShell.material.uniforms.uTime.value=simTime;
       ergosphereShell.material.uniforms.uSpin.value=PHYS.SPIN;
     }
-    // Frame-dragging: rotate ergosphere
-    // Ω_H = a/(2Mr₊), r₊ = M(1+√(1-a²)) → for a=0.7: Ω_H ≈ 0.204
     const omegaH = PHYS.SPIN / (2.0 * (1.0 + Math.sqrt(1.0 - PHYS.SPIN*PHYS.SPIN)));
-    ergosphereShell.rotation.y += dt * omegaH * 3.0; // scaled for visibility
+    ergosphereShell.rotation.y += dt * omegaH * 3.0;
     if(pP>=1)advancePhase();
   }
-  // PHASE 6: CONSUMING PLANETS — Roche limit, spaghettification ═══
-  // Orbital mechanics + spaghettification handled in planet forEach loop below
   else if(currentPhase===6){
     star.mass=PHYS.M_BH+2;star.isBlackHole=true;star.bhGlow=1;star.accretionOpacity=1;star.radius=2;
     lensingGroup.visible=true;photonSphereRing.visible=true;ergosphereShell.visible=true;
     if(photonSphereRing.material.uniforms) photonSphereRing.material.uniforms.uTime.value=simTime;
     if(ergosphereShell.material.uniforms) ergosphereShell.material.uniforms.uTime.value=simTime;
-    // Ω_H = a/(2Mr₊), r₊ = M(1+√(1-a²)) → for a=0.7: Ω_H ≈ 0.204
     const omegaH = PHYS.SPIN / (2.0 * (1.0 + Math.sqrt(1.0 - PHYS.SPIN*PHYS.SPIN)));
     ergosphereShell.rotation.y += dt * omegaH * 3.0;
-    // Advance when all planets consumed
     if(consumedCount >= 8) advancePhase();
   }
-  // PHASE 7: HAWKING RADIATION — T_H=ℏc³/8πGMk_B, dM/dt=-ℏc⁴/(15360πG²M²) ═══
   else if(currentPhase===7){
     star.isBlackHole=true;star.bhGlow=1;lensingGroup.visible=true;
     document.getElementById('eq-hawking').style.display='block';
     photonSphereRing.visible=true;ergosphereShell.visible=true;
     if(photonSphereRing.material.uniforms) photonSphereRing.material.uniforms.uTime.value=simTime;
     if(ergosphereShell.material.uniforms) ergosphereShell.material.uniforms.uTime.value=simTime;
-    // CUBIC EVAPORATION LAW
-    // M(t) = M₀ × (1 - t/t_evap)^(1/3) — mass follows cube-root decay
-    // This means dM/dt ∝ -1/M² (runaway at end)
-    const M0 = PHYS.M_BH + 2; // Initial mass
+    const M0 = PHYS.M_BH + 2;
     const cubeRoot = Math.pow(Math.max(0.001, 1.0 - pP), 1.0/3.0);
     star.mass = M0 * cubeRoot;
     star.radius = 2.0 * cubeRoot;
     star.accretionOpacity = Math.max(0.1, cubeRoot);
-    // Hawking temperature: T_H ∝ 1/M → rises dramatically as M drops
     const T_H_relative = M0 / Math.max(star.mass, 0.01);
-    // Power: P ∝ 1/M² → luminosity explodes at end
     const P_relative = T_H_relative * T_H_relative;
-    // Hawking particles: emission peaks near photon sphere (r ≈ 3M)
-    // Wondrak et al. 2023: pair production peaks at r = 3M, not horizon
     hawkingParticles.visible=true;
     hawkingParticles.material.uniforms.uTime.value=phaseTime*(1+P_relative*0.5);
     hawkingParticles.material.uniforms.uAlpha.value=Math.min(1.0, 0.2 + P_relative * 0.3);
-    // All GR structures shrink proportionally with mass
     const massScale = Math.max(0.05, star.mass / M0);
     lensingGroup.scale.set(massScale, massScale, massScale);
     photonSphereRing.scale.set(massScale, massScale, massScale);
     ergosphereShell.scale.set(massScale, massScale, massScale);
-    // Flash intensifies as evaporation accelerates (P ∝ 1/M²)
     if(pP > 0.9) flashIntensity = Math.max(flashIntensity, (pP-0.9)/0.1 * P_relative * 0.3);
     if(pP>=1)advancePhase();
   }
-  // PHASE 8: BH EXPLOSION — Final evaporation runaway, γ-ray flash ═══
   else if(currentPhase===8){
     const t=pP;
-    // Temperature runaway: T→10¹⁷K, emits all particle species
     if(t<0.15) flashIntensity=Math.max(flashIntensity,ease(t/0.15)*3.0);
     starGroup.visible=t<0.05;lensingGroup.visible=false;
     hawkingParticles.visible=false;
@@ -2099,7 +2087,6 @@ function animate(){
     explosionParticles.visible=true;
     explosionParticles.material.uniforms.uTime.value=phaseTime;
     explosionParticles.material.uniforms.uAlpha.value=Math.max(0,1-t*0.5);
-    // Final burst: ~2×10²² J released in under a second
     shockwave2.scale.set(1+t*120,1+t*120,1);
     shockwave2.material.opacity=Math.max(0,0.8-t);
     shockwave2.material.color.setRGB(1,0.8-t*0.5,1-t*0.7);
@@ -2107,7 +2094,6 @@ function animate(){
     if(t<0.3){camera.position.x+=(Math.random()-0.5)*0.5*(1-t/0.3);camera.position.y+=(Math.random()-0.5)*0.5*(1-t/0.3);}
     if(pP>=1)advancePhase();
   }
-  // PHASE 9: PLANETARY NEBULA — Ionized shell remnant ═══
   else if(currentPhase===9){
     starGroup.visible=false;lensingGroup.visible=false;
     photonSphereRing.visible=false;ergosphereShell.visible=false;
@@ -2124,14 +2110,12 @@ function animate(){
     star.mass=0.01;
   }
 
-  // Update star visuals
   if(starGroup.visible){
     const cm=starGroup.userData.coreMat.uniforms;cm.uTime.value=simTime;cm.uRadius.value=Math.max(0.1,star.radius);
     cm.uColor.value.set(...star.color);cm.uCollapse.value=star.collapseT;cm.uBH.value=star.bhGlow;
     const gm=starGroup.userData.glowMat.uniforms;gm.uTime.value=simTime;gm.uScale.value=star.isBlackHole?Math.max(0.2,star.radius*1.8):star.coronaScale;
     gm.uColor.value.set(...(star.isBlackHole?[0.48,0.18,1]:star.coronaColor));gm.uBH.value=star.bhGlow;gm.uOpacity.value=0.6;
     const dm=starGroup.userData.diskMat.uniforms;dm.uTime.value=simTime;dm.uOpacity.value=star.accretionOpacity;
-    // Pass physics params for Novikov-Thorne + Doppler computation
     dm.uCamPos.value.copy(camera.position);
     dm.uMass.value=star.mass;
     dm.uSpin.value=PHYS.SPIN;
@@ -2139,8 +2123,8 @@ function animate(){
 
   const ml=scene.userData.mainLight;
   if(currentPhase>=8){ml.intensity=Math.max(0.3,3-phaseTime*0.3);ml.color.setRGB(0.8,0.5,1);}
-  else if(currentPhase===3){ml.intensity=1.5;ml.color.setRGB(0.5,0.6,1);} // NS: blue-white
-  else if(currentPhase===4){ml.intensity=1.0+flashIntensity*3;ml.color.setRGB(0.4,0.5,1);} // Jets: blue
+  else if(currentPhase===3){ml.intensity=1.5;ml.color.setRGB(0.5,0.6,1);}
+  else if(currentPhase===4){ml.intensity=1.0+flashIntensity*3;ml.color.setRGB(0.4,0.5,1);}
   else if(star.isBlackHole){ml.intensity=0.5;ml.color.setRGB(0.4,0.2,1);}
   else{ml.intensity=2.5+flashIntensity*8;ml.color.setRGB(1,0.8+flashIntensity*0.2,0.4+flashIntensity*0.6);}
 
@@ -2148,7 +2132,6 @@ function animate(){
   if(fabricMesh.visible){
     fabricMesh.material.uniforms.uTime.value=simTime;
     fabricMesh.material.uniforms.uMass.value=star.mass;
-    // Update planet well positions for fabric shader
     const wells = fabricMesh.material.uniforms.uPlanetWells.value;
     planets.forEach((p,i) => {
       if(p.consumed || !p.group.visible){
@@ -2163,39 +2146,25 @@ function animate(){
     if(p.consumed){ p.debrisPts.visible=false; return; }
     p.orbitLine.visible=show.orbits&&!p.consumed;
     const orbit=p.currentOrbit;
-
-    // KEPLERIAN ORBITAL MECHANICS
-    // Kepler's 3rd law: angular velocity ω ∝ r^(-3/2)
-    // Speed = 1/√(dist) — enforced directly from Kepler
     const keplerSpeed = p.def.speed / Math.sqrt(Math.max(orbit, 0.5));
     p.spiralAngle += dt * keplerSpeed;
     const a = p.spiralAngle + p.def.phase;
-
-    // INWARD SPIRAL (Phase 6 only)
-    // Continuous orbital energy loss: dist decreases each frame
     if(currentPhase === 6 && !p.consumed){
       const isTarget = planets.filter(x=>!x.consumed)[0] === p;
       if(isTarget){
-        // Primary target: gravitational inspiral a = GM/r²
         const gravAccel = star.mass * 0.8 / (orbit * orbit + 0.5);
         p.currentOrbit = Math.max(0.5, orbit - dt * gravAccel * 2.5);
       } else {
-        // Background planets: slow drift inward
         const bgGrav = star.mass * 0.15 / (orbit * orbit + 1.0);
         p.currentOrbit = Math.max(2.0, orbit - dt * bgGrav - dt * 0.02);
       }
     }
-
-    // Position on orbit
     p.group.position.x = Math.cos(a) * orbit;
     p.group.position.z = Math.sin(a) * orbit;
-    // Follow spacetime curvature — central mass + own well + neighbor planet wells
     const distBH = Math.sqrt(p.group.position.x**2 + p.group.position.z**2);
     let yPos = -star.mass * 3.5 / (distBH + 0.6) - 3;
-    // Own planet's self-gravity well (it sits in its own depression)
-    const selfWellDepth = p.def.gmass * 0.0008 * 2.5 / 0.3; // at center of own well (pd=0)
+    const selfWellDepth = p.def.gmass * 0.0008 * 2.5 / 0.3;
     yPos -= selfWellDepth;
-    // Neighboring planet gravitational influence
     planets.forEach((other, j) => {
       if(j === i || other.consumed) return;
       const dx = p.group.position.x - other.group.position.x;
@@ -2205,22 +2174,14 @@ function animate(){
       yPos -= neighborWell;
     });
     p.group.position.y = yPos;
-
-    // Direction to BH
     const toBH = new THREE.Vector3(-p.group.position.x, 0, -p.group.position.z).normalize();
-
-    // SPAGHETTIFICATION — MESH Z-AXIS SCALING
-    // When planet crosses Roche limit (dist < 5.0), tidal gradient stretches it
     const ROCHE = 5.0;
     if(currentPhase === 6 && orbit < ROCHE && !p.consumed){
-      // Stretch mesh along the radial direction to BH (mapped to local Z)
       const stretchAmount = 1.0 + (ROCHE - orbit) * 2.0;
-      const squeezeAmount = 1.0 / Math.sqrt(stretchAmount); // Conservation of volume
+      const squeezeAmount = 1.0 / Math.sqrt(stretchAmount);
       p.group.scale.set(squeezeAmount, squeezeAmount, stretchAmount);
-      // Orient the stretch toward the BH
       const toBHAngle = Math.atan2(-p.group.position.z, -p.group.position.x);
       p.group.rotation.y = toBHAngle;
-      // Track consumption progress
       const rocheProgress = 1.0 - (orbit - 0.5) / (ROCHE - 0.5);
       p.consumeT = Math.min(1.0, Math.max(0, rocheProgress));
     } else if(currentPhase !== 6 || orbit >= ROCHE){
@@ -2228,8 +2189,6 @@ function animate(){
       p.group.rotation.y += dt * 2;
       p.consumeT = 0;
     }
-
-    // CONSUMPTION — event horizon threshold
     if(currentPhase === 6 && orbit <= 0.8 && !p.consumed){
       p.consumed = true;
       p.group.visible = false;
@@ -2239,8 +2198,6 @@ function animate(){
       p.flash = 1.5;
       flashIntensity = Math.max(flashIntensity, 0.8);
     }
-
-    // SHADER UNIFORMS (for FBM effects inside the planet shader)
     const pMat = p.group.children[0]?.material;
     if(pMat && pMat.uniforms){
       const tidalFactor = Math.max(0, 1.0 - orbit / (ROCHE * 1.5));
@@ -2251,13 +2208,9 @@ function animate(){
       pMat.uniforms.uDissolve.value = Math.max(0, stretchVal - 0.6) * 2.5;
       pMat.uniforms.uTime.value = simTime;
     }
-
-    // Ring transparency during disruption
     if(p.group.children[1] && p.consumeT > 0.2){
       p.group.children[1].material.opacity = 0.35 * (1.0 - p.consumeT);
     }
-
-    // DEBRIS STREAMS
     const debrisActive = currentPhase === 6 && orbit < 15 && !p.consumed;
     p.debrisPts.visible = debrisActive;
     if(debrisActive){
@@ -2268,11 +2221,8 @@ function animate(){
       p.debrisMat.uniforms.uPlanetPos.value.set(p.group.position.x, p.group.position.y + 3, p.group.position.z);
       p.debrisMat.uniforms.uActive.value = Math.min(1.0, debrisStrength + rocheBoost * 0.3);
     }
-
-    // HUD distance
     document.getElementById(`psd-${i}`).textContent = p.consumed ? 'CONSUMED' :
       orbit < ROCHE ? `${orbit.toFixed(1)} AU ⚠` : `${orbit.toFixed(1)} AU`;
-
     if(p.flash > 0){
       p.flash -= dt * 1.5;
       flashIntensity = Math.max(flashIntensity, p.flash * 0.5);
@@ -2294,9 +2244,8 @@ function animate(){
     const ls=0.8+star.mass*0.05;lensingGroup.scale.set(ls,ls,ls);}else if(!show.lensing)lensingGroup.visible=false;
 
   if(!isDrag)cameraAngle+=dt*0.06;
-  // Only auto-adjust distance if user hasn't manually zoomed in last 3 seconds
   if(userZoomed){
-    userZoomTimer-=dt;
+    userZoomTimer-=rawDt; // Use rawDt so zoom timer works even when paused
     if(userZoomTimer<=0) userZoomed=false;
   } else {
     const tDist=currentPhase>=9?90:70;
@@ -2312,48 +2261,40 @@ function animate(){
   const names=['Main Sequence','Red Giant','Supernova','Neutron Star','Relativistic Jets',
     'Black Hole (Kerr)','Consuming Planets','Hawking Evaporation','BH Explosion','Planetary Nebula'];
   document.getElementById('v-phase').textContent=names[currentPhase]||'';
-  // Temperature display — physics accurate per phase
   const tempDisplays = [
-    `${star.temp.toFixed(0)} × 10⁶ K`, // 0: Main seq
-    `${star.temp.toFixed(0)} × 10⁶ K`, // 1: Red giant (core temp)
-    currentPhase===2&&pP<0.3 ? '5.4×10⁹ K' : '~10¹⁰ K', // 2: Supernova
-    `${(star.temp*1e6).toExponential(1)} K`, // 3: NS
-    '—',                                // 4: Jets (no surface)
-    '—',                                // 5: BH
-    '—',                                // 6: Consuming
-    `T_H ≈ ${(6.17e-9 * 1.0/Math.max(0.01,star.mass)).toExponential(1)} K`, // 7: Hawking (T_H=ℏc³/8πGMk_B)
-    '~10¹⁷ K',                          // 8: Explosion
-    '~10⁴ K',                           // 9: Nebula
+    `${star.temp.toFixed(0)} × 10⁶ K`,
+    `${star.temp.toFixed(0)} × 10⁶ K`,
+    currentPhase===2&&pP<0.3 ? '5.4×10⁹ K' : '~10¹⁰ K',
+    `${(star.temp*1e6).toExponential(1)} K`,
+    '—',
+    '—',
+    '—',
+    `T_H ≈ ${(6.17e-9 * 1.0/Math.max(0.01,star.mass)).toExponential(1)} K`,
+    '~10¹⁷ K',
+    '~10⁴ K',
   ];
   document.getElementById('v-temp').textContent=tempDisplays[currentPhase]||'—';
   document.getElementById('v-mass').textContent=currentPhase>=9?'Remnant Cloud':`${Math.max(0,star.mass).toFixed(1)} M☉`;
-  // Schwarzschild radius: r_s = 2GM/c² ≈ 2.95 km per M☉
   const rs = star.mass * 2.95;
   document.getElementById('v-rs').textContent=
     currentPhase<3 ? '—' :
     currentPhase===3 ? `R_NS ≈ ${PHYS.NS_RADIUS_KM} km` :
     currentPhase>=9 ? 'N/A' :
     `${rs.toFixed(1)} km`;
-  // Spin parameter
   document.getElementById('v-spin').textContent=
     currentPhase>=4 && currentPhase<9 ? `a/M = ${PHYS.SPIN}` :
     currentPhase===3 ? `P = ${(0.02 + (1-ease(pP))*0.5).toFixed(3)}s` : '—';
-  // Gravitational redshift at ISCO: z = 1/√(1-r_s/r_ISCO) - 1
   if(currentPhase>=5 && currentPhase<9 && star.mass > 0.1){
-    // Exact: z = 1/√(1 - r_s/r_ISCO) - 1
-    // For Kerr a=0.7: r_ISCO ≈ 3.6 r_g, r_s = 2 r_g → r_s/r_ISCO = 2/3.6 ≈ 0.556
-    const rs_over_risco = 2.0 / 3.6; // For a/M = 0.7
+    const rs_over_risco = 2.0 / 3.6;
     const z = 1.0/Math.sqrt(1.0 - rs_over_risco) - 1.0;
     document.getElementById('v-redshift').textContent=`z(ISCO) = ${z.toFixed(3)}`;
   } else {
     document.getElementById('v-redshift').textContent='—';
   }
   document.getElementById('v-planets').textContent=`${8-consumedCount} / 8`;
-  // Progress bar: use actual progress per phase, not raw phaseTime
   const totalDur = PHASE_DURATIONS.reduce((a,b)=>a+b,0);
   let tE=0;
   for(let i=0;i<currentPhase;i++) tE+=PHASE_DURATIONS[i];
-  // Phase 6 progress is consumption-driven, not time-driven
   if(currentPhase === 6){
     tE += PHASE_DURATIONS[6] * (consumedCount / 8);
   } else {
@@ -2362,25 +2303,18 @@ function animate(){
   document.getElementById('tl-fill').style.width=`${Math.min(100, tE / totalDur * 100)}%`;
   document.querySelectorAll('#timeline .mrk').forEach((m,i)=>m.classList.toggle('active',i<=currentPhase));
 
-  // SCREEN-SPACE GRAVITATIONAL LENSING
-  // Project BH world position (0, -3, 0) to screen UV coordinates
   if(pipeline.lensingMat){
     const bhWorld = new THREE.Vector3(0, -3, 0);
     const bhScreen = bhWorld.clone().project(camera);
-    // Convert from NDC (-1→1) to UV (0→1)
     const bhUV = new THREE.Vector2(bhScreen.x * 0.5 + 0.5, bhScreen.y * 0.5 + 0.5);
     pipeline.lensingMat.uniforms.uBHScreen.value.copy(bhUV);
     pipeline.lensingMat.uniforms.uAspect.value = camera.aspect;
-    // Schwarzschild radius in screen units: project a point at r_s distance
-    // Scale rs based on apparent angular size of BH at current camera distance
     const apparentRS = Math.min(0.20, 3.5 * star.radius / cameraDist);
-    // Only activate lensing when BH exists (phases 4-8) and is visible
     const isBHPhase = star.isBlackHole && currentPhase >= 4 && currentPhase <= 8;
     pipeline.lensingMat.uniforms.uRS.value = apparentRS;
     pipeline.lensingMat.uniforms.uMassParam.value = isBHPhase ? Math.min(1.0, star.bhGlow) : 0.0;
   }
 
-  // Render with or without bloom
   if(show.bloom && bloomStr > 0){
     pipeline.render(scene, camera);
   } else {
@@ -2392,4 +2326,3 @@ init();
 </script>
 </body>
 </html>
-
