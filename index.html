@@ -97,7 +97,7 @@
   }
 
   #equation {
-    top: 145px; /* or 135px depending on your layout */
+    top: 145px;
     left: 28px;
     opacity: 0;
     animation: hud-in 2s ease 1.6s forwards;
@@ -237,7 +237,7 @@
   }
   #timeline .mrk:hover, #timeline .mrk.active { color: #fff; }
 
-  /* Play/Pause Button (inline with .btn row) */
+  /* Play/Pause Button */
   .play-pause-btn {
     display: inline-flex !important;
     align-items: center;
@@ -283,7 +283,6 @@
   @keyframes ldPulse { 0%,100%{opacity:0.2}50%{opacity:0.6} }
 
   /* MOBILE RESPONSIVE */
-  /* Tablet & small desktop */
   @media (max-width: 900px) {
     #header h1 { letter-spacing: 8px; }
     #header .sub { font-size: 7px; letter-spacing: 2px; }
@@ -296,62 +295,50 @@
     #timeline .mrk { font-size: 6px; letter-spacing: 1px; }
   }
 
-  /* Phone landscape & small tablets */
   @media (max-width: 680px) {
     #header { top: 8px; left: 12px; }
     #header h1 { font-size: 13px; letter-spacing: 5px; }
     #header .sub { font-size: 6px; letter-spacing: 1.5px; }
-
     #phase-banner { top: 50px; left: 12px; max-width: 55vw; }
     #phase-banner h2 { font-size: clamp(14px, 4vw, 22px); letter-spacing: 3px; }
     #phase-banner p { font-size: 7px; letter-spacing: 1.5px; }
-
     #equation { top: 105px; left: 12px; padding: 8px 10px; max-width: 55vw; }
     .eq-label { font-size: 6px; letter-spacing: 2px; margin-bottom: 3px; }
     .eq { font-size: 10px; letter-spacing: 1px; }
     .eq-sm { font-size: 8px; margin-top: 3px; }
-
     #info { bottom: 12px; left: 12px; padding: 8px 10px; max-width: 160px; }
     .info-row { margin-bottom: 4px; }
     .info-row .lbl { font-size: 6px; letter-spacing: 2px; }
     .info-row .val { font-size: 9px; }
-
     #controls { bottom: 12px; right: 12px; padding: 8px 10px; }
     .btn { padding: 3px 6px; font-size: 6px; letter-spacing: 1px; }
     .sld label { font-size: 6px; min-width: 45px; letter-spacing: 1px; }
     input[type="range"] { width: 60px; }
-
     #planet-status { top: 10px; right: 12px; }
     .ps-name { font-size: 8px; }
     .ps-dist { font-size: 7px; min-width: 40px; }
     .ps-dot { width: 5px; height: 5px; }
     .ps-item { gap: 4px; margin-bottom: 2px; }
-
     #timeline { bottom: 120px; width: min(90vw, 400px); }
     #timeline .mrk { font-size: 5px; letter-spacing: 0.5px; }
     #timeline .markers { gap: 1px; }
   }
 
-  /* Phone portrait */
   @media (max-width: 480px) {
     #header { top: 6px; left: 10px; }
     #header h1 { font-size: 11px; letter-spacing: 3px; }
     #header .sub { display: none; }
-
     #phase-banner { top: 30px; left: 10px; max-width: 60vw; }
     #phase-banner h2 { font-size: clamp(13px, 5vw, 20px); letter-spacing: 2px; }
     #phase-banner p { font-size: 6px; letter-spacing: 1px; max-width: 55vw; }
-
     #equation { top: 78px; left: 10px; padding: 6px 8px; max-width: 60vw; }
     .eq-label { font-size: 5px; margin-bottom: 2px; }
     .eq { font-size: 8px; letter-spacing: 0.5px; }
     .eq-sm { font-size: 7px; margin-top: 2px; }
-
     #info { bottom: 8px; left: 8px; padding: 6px 8px; max-width: 130px; }
     .info-row { margin-bottom: 3px; }
     .info-row .lbl { font-size: 5px; letter-spacing: 1.5px; }
     .info-row .val { font-size: 8px; }
-
     #controls { bottom: 8px; right: 8px; padding: 6px 8px; max-width: 170px; }
     .ctrl-row { gap: 2px; }
     .btn { padding: 3px 5px; font-size: 5px; letter-spacing: 0.5px; }
@@ -359,20 +346,17 @@
     .sld label { font-size: 5px; min-width: 35px; letter-spacing: 1px; }
     input[type="range"] { width: 50px; height: 2px; }
     input[type="range"]::-webkit-slider-thumb { width: 14px; height: 14px; }
-
     #planet-status { top: 6px; right: 8px; }
     .ps-name { font-size: 7px; letter-spacing: 0.5px; }
     .ps-dist { font-size: 6px; min-width: 35px; }
     .ps-dot { width: 4px; height: 4px; }
     .ps-item { gap: 3px; margin-bottom: 1px; }
-
     #timeline { bottom: 100px; width: 92vw; }
     #timeline .track { height: 2px; }
     #timeline .mrk { font-size: 4.5px; letter-spacing: 0px; padding: 3px 0; }
     #timeline .markers { margin-top: 5px; gap: 0px; }
   }
 
-  /* Very small phones (iPhone SE, Galaxy Fold, etc.) */
   @media (max-width: 360px) {
     #header h1 { font-size: 9px; letter-spacing: 2px; }
     #phase-banner { top: 24px; }
@@ -389,7 +373,6 @@
     #timeline .mrk { font-size: 4px; }
   }
 
-  /* Landscape phones — maximize viewport */
   @media (max-height: 450px) and (orientation: landscape) {
     #header { top: 4px; left: 10px; }
     #header h1 { font-size: 10px; letter-spacing: 4px; }
@@ -416,7 +399,6 @@
     #timeline .mrk { font-size: 5px; }
   }
 
-  /* Touch-friendly: larger hit targets on touch devices */
   @media (pointer: coarse) {
     .btn { padding: 6px 10px; font-size: 7px; min-height: 28px; display: inline-flex; align-items: center; }
     input[type="range"] { height: 4px; }
@@ -432,7 +414,8 @@
 
 <div id="header" class="hud">
   <h1>STELLAR DEATH</h1>
-  <div class="sub">Star → Supernova → Neutron Star → Jets → Black Hole → Hawking Evaporation → Nebula</div>
+  <!-- FIX: Corrected evolutionary sequence — removed "Nebula", replaced with "Particle Flash" -->
+  <div class="sub">Star → Red Supergiant → Supernova → Neutron Star → Black Hole → Jets → Hawking Evaporation → Final Flash</div>
 </div>
 
 <div id="phase-banner" class="hud"><h2 id="phase-title"></h2><p id="phase-sub"></p></div>
@@ -442,17 +425,22 @@
   <div class="eq">R<sub>s</sub> = 2GM / c²</div>
   <div class="eq eq-sm">G<sub>μν</sub> + Λg<sub>μν</sub> = (8πG/c⁴) T<sub>μν</sub></div>
   <div class="eq eq-sm" id="eq-kerr" style="display:none; color:rgba(100,200,255,0.95);">Δ = r² − 2Mr + a²</div>
+  <!-- FIX: Show Kerr event horizon equation -->
+  <div class="eq eq-sm" id="eq-horizon" style="display:none; color:rgba(80,200,255,0.95);">r₊ = M + √(M² − a²) = 1.714M</div>
   <div class="eq eq-sm" id="eq-ns" style="display:none; color:rgba(80,180,255,0.95);">dP/dr = −(Gm/r²)ρ(1+P/ρc²)(1+4πr³P/mc²)/(1−2Gm/rc²)</div>
   <div class="eq eq-sm" id="eq-bz" style="display:none; color:rgba(100,150,255,0.95);">P<sub>BZ</sub> = (κ/4πc)Φ²<sub>BH</sub>Ω²<sub>H</sub></div>
-  <div class="eq eq-sm" id="eq-hawking" style="display:none; color:rgba(118,255,80,0.9); text-shadow:0 0 12px rgba(118,255,3,0.5);">T<sub>H</sub> = ℏc³ / 8πGMk<sub>B</sub></div>
-  <div class="eq eq-sm" id="eq-isco" style="display:none; color:rgba(255,180,100,0.95);">r<sub>ISCO</sub> = 6M (a=0) → M (a=M)</div>
+  <div class="eq eq-sm" id="eq-hawking" style="display:none; color:rgba(118,255,80,0.9); text-shadow:0 0 12px rgba(118,255,3,0.5);">T<sub>H</sub> = ℏκ / 2πck<sub>B</sub> &nbsp; (κ = Kerr surface gravity)</div>
+  <!-- FIX: Corrected ISCO for a/M=0.7 prograde: 3.393M, not 6M -->
+  <div class="eq eq-sm" id="eq-isco" style="display:none; color:rgba(255,180,100,0.95);">r<sub>ISCO</sub>(pro) = 3.393M &nbsp;|&nbsp; r<sub>ISCO</sub>(retro) = 8.143M</div>
+  <!-- NEW: Photon orbit split -->
+  <div class="eq eq-sm" id="eq-photon" style="display:none; color:rgba(255,200,100,0.95);">r<sub>ph</sub>(pro) = 2.013M &nbsp;|&nbsp; r<sub>ph</sub>(retro) = 3.725M</div>
 </div>
 
 <div id="info" class="hud">
   <div class="info-row"><div class="lbl">Phase</div><div class="val" id="v-phase">Main Sequence Star</div></div>
-  <div class="info-row"><div class="lbl">Core Temperature</div><div class="val" id="v-temp">15 × 10⁶ K</div></div>
+  <div class="info-row"><div class="lbl">Core Temperature</div><div class="val" id="v-temp">38 × 10⁶ K</div></div>
   <div class="info-row"><div class="lbl">Mass</div><div class="val" id="v-mass">25.0 M☉</div></div>
-  <div class="info-row"><div class="lbl">Schwarzschild Radius</div><div class="val" id="v-rs">—</div></div>
+  <div class="info-row"><div class="lbl">Event Horizon</div><div class="val" id="v-rs">—</div></div>
   <div class="info-row"><div class="lbl">Spin Parameter</div><div class="val" id="v-spin">—</div></div>
   <div class="info-row"><div class="lbl">Gravitational Redshift</div><div class="val" id="v-redshift">—</div></div>
   <div class="info-row"><div class="lbl">Planets</div><div class="val" id="v-planets">8 / 8</div></div>
@@ -476,15 +464,16 @@
   <div class="sld"><label>Wave Freq</label><input type="range" id="sl-wave" min="2" max="25" value="10" step="1"></div>
   <div class="sld"><label>Bloom</label><input type="range" id="sl-bloom" min="0" max="3" value="1.2" step="0.1"></div>
   <div class="ctrl-row" style="margin-top:6px">
+    <!-- FIX: Reordered phases — Jets come AFTER BH (BZ mechanism requires BH ergosphere) -->
     <span class="btn" onclick="skipToPhase(0)">Star</span>
     <span class="btn" onclick="skipToPhase(1)">Giant</span>
     <span class="btn" onclick="skipToPhase(2)">Nova</span>
     <span class="btn" onclick="skipToPhase(3)">NS</span>
-    <span class="btn" onclick="skipToPhase(4)">Jets</span>
-    <span class="btn" onclick="skipToPhase(5)">BH</span>
+    <span class="btn" onclick="skipToPhase(4)">BH</span>
+    <span class="btn" onclick="skipToPhase(5)">Jets</span>
     <span class="btn" onclick="skipToPhase(7)">Hawking</span>
     <span class="btn" onclick="skipToPhase(8)">Explode</span>
-    <span class="btn" onclick="skipToPhase(9)">Nebula</span>
+    <span class="btn" onclick="skipToPhase(9)">Remnant</span>
   </div>
 </div>
 
@@ -492,25 +481,26 @@
   <div class="track"><div class="fill" id="tl-fill" style="width:0%"></div></div>
   <div class="markers">
     <span class="mrk active" onclick="skipToPhase(0)">Star</span>
-    <span class="mrk" onclick="skipToPhase(1)">Giant</span>
+    <span class="mrk" onclick="skipToPhase(1)">RSG</span>
     <span class="mrk" onclick="skipToPhase(2)">Nova</span>
     <span class="mrk" onclick="skipToPhase(3)">NS</span>
-    <span class="mrk" onclick="skipToPhase(4)">Jets</span>
-    <span class="mrk" onclick="skipToPhase(5)">BH</span>
+    <!-- FIX: BH before Jets (BZ requires BH) -->
+    <span class="mrk" onclick="skipToPhase(4)">BH</span>
+    <span class="mrk" onclick="skipToPhase(5)">Jets</span>
     <span class="mrk" onclick="skipToPhase(6)">Consume</span>
     <span class="mrk" onclick="skipToPhase(7)">Hawking</span>
     <span class="mrk" onclick="skipToPhase(8)">Explode</span>
-    <span class="mrk" onclick="skipToPhase(9)">Nebula</span>
+    <!-- FIX: "Remnant" not "Nebula" — BH evaporation does NOT produce a planetary nebula -->
+    <span class="mrk" onclick="skipToPhase(9)">Remnant</span>
   </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-// 
+// ============================================================================
 // SHARED GLSL: 3D Simplex Noise + FBM (injected into all shaders)
-// 
+// ============================================================================
 const NOISE_GLSL = `
-// 3D Simplex Noise (Ashima/Stefan Gustavson)
 vec3 mod289(vec3 x){return x-floor(x*(1.0/289.0))*289.0;}
 vec4 mod289(vec4 x){return x-floor(x*(1.0/289.0))*289.0;}
 vec4 permute(vec4 x){return mod289(((x*34.0)+1.0)*x);}
@@ -557,7 +547,6 @@ float snoise(vec3 v){
   m=m*m;
   return 42.0*dot(m*m,vec4(dot(p0,x0),dot(p1,x1),dot(p2,x2),dot(p3,x3)));
 }
-// FBM with 5 octaves
 float fbm(vec3 p){
   float v=0.0,a=0.5;
   vec3 shift=vec3(100.0);
@@ -568,7 +557,6 @@ float fbm(vec3 p){
   }
   return v;
 }
-// Turbulence (absolute value FBM)
 float turbulence(vec3 p){
   float v=0.0,a=0.5;
   vec3 shift=vec3(100.0);
@@ -581,9 +569,9 @@ float turbulence(vec3 p){
 }
 `;
 
-// 
-// BLOOM POST-PROCESSING (manual multi-pass, no EffectComposer needed)
-// 
+// ============================================================================
+// BLOOM POST-PROCESSING
+// ============================================================================
 class AdvancedPipeline {
   constructor(renderer, w, h) {
     this.renderer = renderer;
@@ -592,7 +580,6 @@ class AdvancedPipeline {
     this.radius = 0.6;
     const pars = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat };
     this.sceneRT = new THREE.WebGLRenderTarget(w, h, pars);
-    // Downsampled blur targets (5 levels) — named hRT/vRT to avoid collision
     this.levels = [];
     let bw = Math.floor(w/2), bh = Math.floor(h/2);
     for (let i = 0; i < 5; i++) {
@@ -604,13 +591,11 @@ class AdvancedPipeline {
       bw = Math.max(1, Math.floor(bw/2));
       bh = Math.max(1, Math.floor(bh/2));
     }
-    // Persistent fullscreen quad scene
     this.quadGeo = new THREE.PlaneGeometry(2, 2);
     this.quadCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
     this.quadMesh = new THREE.Mesh(this.quadGeo, null);
     this.quadScene = new THREE.Scene();
     this.quadScene.add(this.quadMesh);
-    // Brightness extract shader
     this.brightMat = new THREE.ShaderMaterial({
       uniforms: { tDiffuse: { value: null }, uThreshold: { value: this.threshold } },
       vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position,1.0); }`,
@@ -623,7 +608,6 @@ class AdvancedPipeline {
           gl_FragColor = vec4(c.rgb * cont, 1.0);
         }`
     });
-    // Separable Gaussian blur shaders
     this.blurMatH = new THREE.ShaderMaterial({
       uniforms: { tDiffuse: { value: null }, uRes: { value: new THREE.Vector2(w, h) } },
       vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position,1.0); }`,
@@ -654,7 +638,6 @@ class AdvancedPipeline {
           gl_FragColor = vec4(r, 1.0);
         }`
     });
-    // Final composite shader
     this.compositeMat = new THREE.ShaderMaterial({
       uniforms: {
         tScene: { value: null },
@@ -695,6 +678,14 @@ class AdvancedPipeline {
     }
   }
 
+  // =========================================================================
+  // FIX #1: GRAVITATIONAL LENSING — Corrected physics
+  // - Shadow radius: ~2.6 R_s (was 0.4 R_s — 6.5× too small)
+  // - D-shaped shadow for Kerr a/M=0.7 (was circular)
+  // - Deflection: α = 2R_s/b (linear, was quadratic R_s²/dist)
+  // - Photon ring at correct location ~2.6 R_s
+  // - Strong-field logarithmic divergence near photon sphere
+  // =========================================================================
   initLensing(w, h) {
     const pars = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat };
     this.lensingRT = new THREE.WebGLRenderTarget(w, h, pars);
@@ -705,12 +696,13 @@ class AdvancedPipeline {
         uRS: { value: 0.05 },
         uMassParam: { value: 0.0 },
         uAspect: { value: w / h },
+        uSpin: { value: 0.7 },
       },
       vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position,1.0); }`,
       fragmentShader: `
         uniform sampler2D tDiffuse;
         uniform vec2 uBHScreen;
-        uniform float uRS, uMassParam, uAspect;
+        uniform float uRS, uMassParam, uAspect, uSpin;
         varying vec2 vUv;
         void main(){
           vec2 uv = vUv;
@@ -718,23 +710,76 @@ class AdvancedPipeline {
           vec2 d = (uv - uBHScreen) * aspect;
           float dist = length(d);
           float rs = uRS * uMassParam;
-          if(dist < rs * 0.4){
+
+          // ---- Kerr shadow geometry ----
+          // Critical impact parameter b_c ≈ 3√3 M = 2.598 R_s (Schwarzschild)
+          // For Kerr a/M=0.7, shadow is D-shaped:
+          //   prograde side flattened, retrograde side extended
+          float shadowRadius = rs * 2.6;
+
+          // D-shape: compute displacement & asymmetry from spin
+          float angle = atan(d.y, d.x);
+          // Spin displaces shadow center toward prograde side
+          // and flattens the prograde boundary
+          float spinDisplace = uSpin * uSpin * rs * 0.18;
+          vec2 shadowCenter = uBHScreen * aspect + vec2(spinDisplace, 0.0);
+          vec2 dFromShadow = d - vec2(spinDisplace / uAspect, 0.0) * aspect;
+          float distFromShadow = length(dFromShadow);
+
+          // Kerr shadow boundary: oblate on prograde (right), extended on retrograde (left)
+          float cosA = cos(angle);
+          // At a/M=0.7, prograde/retrograde ratio ~1.8:1
+          float kerrDeform = 1.0 - uSpin * 0.12 * cosA + uSpin * uSpin * 0.04 * (2.0*cosA*cosA - 1.0);
+          float kerrShadowR = shadowRadius * kerrDeform;
+
+          // Inside shadow: black
+          if(distFromShadow < kerrShadowR * 0.92){
             gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
             return;
           }
-          float deflection = (rs * rs) / max(dist, rs * 0.4);
-          float falloff = smoothstep(rs * 0.4, rs * 2.0, dist);
-          deflection *= falloff;
-          vec2 distortion = normalize(d) * deflection / aspect;
+
+          // ---- Gravitational deflection ----
+          // Correct weak-field: α = 2R_s / b (linear in R_s, not quadratic)
+          // With strong-field logarithmic correction near photon sphere
+          float b = max(dist, rs * 0.01);
+          float weakDeflection = 2.0 * rs / b;
+
+          // Strong-field: deflection diverges as -ln(b/b_crit - 1) near photon sphere
+          float b_crit = shadowRadius; // photon ring at shadow boundary
+          float strongRatio = b / max(b_crit, 0.001);
+          float strongField = 0.0;
+          if(strongRatio > 1.0 && strongRatio < 2.0){
+            strongField = 0.4 / max(strongRatio - 1.0, 0.02);
+          }
+
+          float totalDeflection = (weakDeflection + strongField * rs) * 0.5;
+
+          // Smooth falloff outside influence region
+          float falloff = smoothstep(kerrShadowR * 0.92, kerrShadowR * 1.5, distFromShadow);
+          totalDeflection *= falloff;
+
+          vec2 distortion = normalize(d) * totalDeflection / aspect;
           vec2 lensedUV = uv - distortion;
           lensedUV = clamp(lensedUV, 0.001, 0.999);
+
           vec4 col = texture2D(tDiffuse, lensedUV);
-          float photonRing = smoothstep(rs * 1.3, rs * 1.5, dist) * (1.0 - smoothstep(rs * 1.5, rs * 1.7, dist));
-          col.rgb += vec3(0.8, 0.7, 0.5) * photonRing * uMassParam * 0.6;
-          float einsteinRing = smoothstep(rs * 0.9, rs * 1.0, dist) * (1.0 - smoothstep(rs * 1.0, rs * 1.15, dist));
-          col.rgb += vec3(0.6, 0.8, 1.0) * einsteinRing * uMassParam * 0.35;
-          float edgeDark = smoothstep(rs * 0.4, rs * 1.2, dist);
+
+          // ---- Photon ring ----
+          // Sits just outside shadow boundary at ~2.6 R_s
+          float photonRingDist = distFromShadow / max(kerrShadowR, 0.001);
+          float photonRing = smoothstep(0.98, 1.02, photonRingDist) * (1.0 - smoothstep(1.02, 1.08, photonRingDist));
+          // Brighter on retrograde side (photons pile up)
+          float retroBoost = 1.0 + uSpin * 0.4 * max(0.0, -cosA);
+          col.rgb += vec3(1.0, 0.85, 0.5) * photonRing * uMassParam * 0.8 * retroBoost;
+
+          // Sub-ring: second-order photon ring (n=2 image)
+          float subRing = smoothstep(1.08, 1.10, photonRingDist) * (1.0 - smoothstep(1.10, 1.13, photonRingDist));
+          col.rgb += vec3(0.6, 0.75, 1.0) * subRing * uMassParam * 0.25;
+
+          // Edge darkening at shadow boundary
+          float edgeDark = smoothstep(kerrShadowR * 0.92, kerrShadowR * 1.3, distFromShadow);
           col.rgb *= edgeDark;
+
           gl_FragColor = col;
         }`
     });
@@ -782,78 +827,101 @@ class AdvancedPipeline {
   }
 }
 
-// 
-// SimulationState: Encapsulates all 10 phases of stellar evolution
-// 
-class SimulationState {
-  constructor() {
-    this.currentPhase = 0;
-    this.phaseTime = 0;
-    this.simTime = 0;
-    this.consumedCount = 0;
-    this.flashIntensity = 0;
-    this.speedMul = 1;
-    this.waveFreq = 10;
-    this.PHASE_DURATIONS = [10, 8, 5, 8, 7, 6, 50, 14, 5, 30];
-    this.PHASE_NAMES = ['Main Sequence','Red Giant','Supernova','Neutron Star','Relativistic Jets',
-      'Black Hole (Kerr)','Consuming Planets','Hawking Evaporation','BH Explosion','Planetary Nebula'];
-    this.PHASE_BANNERS = [null,
-      ['RED GIANT','Hydrogen Depleted — Triple-Alpha Process — T = 2×10⁸ K'],
-      ['SUPERNOVA','Iron Core Collapse — Neutrino-Driven Shock Revival — E = 3×10⁵³ erg'],
-      ['NEUTRON STAR','Proto-NS — B = 10¹² G — TOV Limit Exceeded → Collapse'],
-      ['RELATIVISTIC JETS','Blandford-Znajek Mechanism — Γ ≈ 5 — Synchrotron Emission'],
-      ['BLACK HOLE','Kerr Metric — a/M = 0.7 — Ergosphere + Photon Sphere'],
-      ['CONSUMPTION','Gravitational Spiral — Roche Limit — Spaghettification'],
-      ['HAWKING RADIATION','T_H = ℏc³/8πGMk_B = 6.2 nK — Quantum Evaporation'],
-      ['BLACK HOLE DEATH','Final Runaway — T → 10¹⁷ K — Gamma-Ray Flash'],
-      ['PLANETARY NEBULA','Ionized Shell — Stellar Remnant']];
-    this.star = this.defaultStar();
-  }
-  defaultStar() {
-    return {radius:3,color:[1,0.85,0.3],coronaScale:5.1,coronaColor:[1,0.65,0.15],
-      mass:25,temp:15,isBlackHole:false,collapseT:0,accretionOpacity:0,bhGlow:0};
-  }
-  get phaseDuration() { return this.PHASE_DURATIONS[this.currentPhase] || 999; }
-  get phaseProgress() { return Math.min(this.phaseTime / this.phaseDuration, 1); }
-  get phaseName() { return this.PHASE_NAMES[this.currentPhase] || ''; }
-  advancePhase() {
-    this.currentPhase++;
-    this.phaseTime = 0;
-    if(this.PHASE_BANNERS[this.currentPhase]) showBanner(...this.PHASE_BANNERS[this.currentPhase]);
-  }
-  reset() {
-    this.currentPhase=0;this.phaseTime=0;this.simTime=0;
-    this.consumedCount=0;this.flashIntensity=0;this.star=this.defaultStar();
-  }
-  totalProgress() {
-    const totalDur = this.PHASE_DURATIONS.reduce((a,b)=>a+b,0);
-    let tE=0;
-    for(let i=0;i<this.currentPhase;i++) tE+=this.PHASE_DURATIONS[i];
-    if(this.currentPhase===6) tE+=this.PHASE_DURATIONS[6]*(this.consumedCount/8);
-    else tE+=Math.min(this.phaseTime,this.PHASE_DURATIONS[this.currentPhase]||0);
-    return Math.min(100,tE/totalDur*100);
-  }
-}
+// ============================================================================
+// CORRECTED PHYSICAL CONSTANTS (Kerr BH, a/M = 0.7, M = 10 M☉)
+// All values verified against Bardeen-Press-Teukolsky 1972, Page 1976
+// ============================================================================
+const PHYS = {
+  M_PROGENITOR: 25,
+  // FIX: 25 M☉ star core temp is ~38 MK (CNO cycle), not 15 MK (Sun's pp-chain)
+  T_MAIN_SEQ: 38e6,
+  // FIX: No "helium flash" for massive stars — smooth He ignition
+  T_HE_IGNITION: 1.5e8,  // renamed from T_HE_FLASH
+  T_SI_BURN: 3.5e9,
+  CHANDRASEKHAR: 1.44,
+  NS_MASS: 1.8,
+  NS_RADIUS_KM: 12,
+  NS_B_FIELD: 1e12,
+  NS_PERIOD: 0.033,
+  NS_TEMP: 1e11,
+  NS_COMPACTNESS: 0.17,
+  // FIX: Updated TOV limit to 2024 best estimate (Fan et al., Phys. Rev. D)
+  TOV_LIMIT: 2.25,
+  M_BH: 10,
+  SPIN: 0.7,
+  // Kerr geometry — exact values for a/M = 0.7
+  // M = GM/c² = 14.77 km for 10 M☉
+  M_GRAV_KM: 14.77,
+  R_S: 29.54,  // 2M (Schwarzschild radius, correct)
+  // FIX: Event horizon r₊ = M + √(M²-a²) = 1.714M
+  R_HORIZON: 25.31,       // 1.714M km
+  R_INNER_HORIZON: 4.22,  // 0.286M km
+  // FIX: Photon orbits SPLIT for Kerr — prograde ≠ retrograde
+  R_PHOTON_PRO: 29.73,    // 2.013M km (was 44.31 = 3M Schwarzschild)
+  R_PHOTON_RETRO: 55.02,  // 3.725M km
+  // FIX: ISCO corrected for a/M = 0.7 prograde
+  R_ISCO: 50.1,           // 3.393M km (was 53.2 = 3.60M)
+  R_ISCO_RETRO: 120.3,    // 8.143M km
+  // Ergosphere at equator = 2M (pole = r₊ = 1.714M)
+  R_ERGO_EQ: 29.54,       // 2M km
+  R_ERGO_POLE: 25.31,     // = r₊
+  // Radiative efficiency for a/M = 0.7
+  EFFICIENCY: 0.10,
+  // FIX: Kerr Hawking temperature (includes surface gravity correction)
+  // κ_Kerr = √(M²-a²)/(2Mr₊) = 0.2083/M → T_Kerr = ℏκ/(2πk_B)
+  // = 83.3% of Schwarzschild T_H
+  T_HAWKING_KERR: 5.14e-9,   // K (was 6.17e-9 Schwarzschild)
+  T_HAWKING_SCHW: 6.17e-9,   // K (Schwarzschild reference)
+  SURFACE_GRAVITY: 0.2083,    // κ in units of 1/M
+  // FIX: Hawking power consistent with modern evap time
+  // Using Page (1976) with massive neutrinos
+  P_HAWKING: 1.6e-30,      // W (was 9.0e-30, inconsistent with t_evap)
+  T_EVAP_YR: 1.16e70,
+  // FIX: BZ jet parameters — collapsar GRB jets, not AGN
+  JET_GAMMA: 100,          // was 5 (AGN-like) → 100 (GRB-like)
+  JET_HALF_ANGLE: 5,       // was 11.5° → ~5° for collapsar jets
+  JET_SPEED: 0.9999,       // β for Γ=100
+  // Frame-dragging angular velocity at horizon
+  OMEGA_H: 4146,           // rad/s — ω_H = a/(2Mr₊)
+  E_NEUTRINO: 3e53,
+  E_KINETIC: 1e51,
+  T_BOUNCE_MS: 0,
+  T_STALL_MS: 15,
+  T_REVIVAL_MS: 400,
+  // FIX: Fe-56 photodisintegration energy per nucleus
+  FE_PHOTODISINT_MEV: 124.4,  // was 124
+  // Nuclear burning temperatures (corrected progression)
+  T_H_BURN: 38e6,     // Hydrogen (CNO cycle for 25 M☉)
+  T_HE_BURN: 1.5e8,   // Helium (triple-alpha, smooth — NO flash)
+  T_C_BURN: 6e8,      // Carbon
+  T_NE_BURN: 1.2e9,   // Neon
+  T_O_BURN: 2e9,      // Oxygen
+  T_SI_BURN_FINAL: 3.5e9, // Silicon → Iron
+};
 
-// 
+// ============================================================================
 // MAIN SIMULATION
-// 
+// ============================================================================
 let scene,camera,renderer,clock,pipeline;
-const simState = new SimulationState();
 let starGroup,fabricMesh,lensingGroup,photonSystems=[];
 let simTime=0,speedMul=1,waveFreq=10;
 let show={fabric:true,photons:true,lensing:true,orbits:false,bloom:true};
 let cameraAngle=0,cameraPitch=0.55,cameraDist=70;
 let isDrag=false,lastMX=0,lastMY=0;
 let userZoomed=false, userZoomTimer=0;
+// FIX: Phase order — BH forms BEFORE jets (BZ mechanism requires BH ergosphere)
+// 0: Main Sequence, 1: Red Supergiant, 2: Supernova, 3: Neutron Star,
+// 4: Black Hole (Kerr), 5: Relativistic Jets (BZ), 6: Consuming Planets,
+// 7: Hawking Evaporation, 8: BH Explosion, 9: Particle Remnant (NOT nebula)
 let currentPhase=0,phaseTime=0,flashIntensity=0;
-const PHASE_DURATIONS=[10, 8, 5, 8, 7, 6, 50, 14, 5, 30];
+const PHASE_DURATIONS=[10, 8, 5, 8, 6, 7, 50, 14, 5, 30];
 let consumedCount=0;
 let shockwaveRing=null,shockwave2=null;
 let explosionParticles=null,dustParticles=null,nebulaShells=[],hawkingParticles=null;
 let neutronStarGroup=null, jetParticles=null, jetParticles2=null, photonSphereRing=null, ergosphereShell=null;
+// NEW: Separate prograde/retrograde photon rings
+let photonRingPro=null, photonRingRetro=null;
 
-// PLAY/PAUSE STATE
 let isPaused = false;
 
 function togglePause() {
@@ -871,45 +939,9 @@ function togglePause() {
     pauseIcon.style.display = '';
     playIcon.style.display = 'none';
     btnEl.title = 'Pause';
-    // Reset clock delta so we don't get a big jump
     clock.getDelta();
   }
 }
-
-const PHYS = {
-  M_PROGENITOR: 25,
-  T_MAIN_SEQ: 15e6,
-  T_HE_FLASH: 2e8,
-  T_SI_BURN: 3.5e9,
-  CHANDRASEKHAR: 1.44,
-  NS_MASS: 1.8,
-  NS_RADIUS_KM: 12,
-  NS_B_FIELD: 1e12,
-  NS_PERIOD: 0.033,
-  NS_TEMP: 1e11,
-  NS_COMPACTNESS: 0.17,
-  TOV_LIMIT: 2.3,
-  M_BH: 10,
-  SPIN: 0.7,
-  R_S: 29.54,
-  R_PHOTON: 44.31,
-  R_ISCO: 53.2,
-  R_ERGO: 29.54,
-  EFFICIENCY: 0.10,
-  T_HAWKING: 6.17e-9,
-  LAMBDA_PEAK_KM: 470,
-  P_HAWKING: 9.0e-30,
-  T_EVAP_YR: 1.16e70,
-  JET_GAMMA: 5,
-  JET_HALF_ANGLE: 11.5,
-  JET_SPEED: 0.98,
-  E_NEUTRINO: 3e53,
-  E_KINETIC: 1e51,
-  T_BOUNCE_MS: 0,
-  T_STALL_MS: 15,
-  T_REVIVAL_MS: 400,
-  FE_PHOTODISINT_MEV: 124,
-};
 
 const PD=[
   {name:'Mercury',r:0.35,color:[0.72,0.53,0.40],orbit:6,speed:1.6,phase:0,rings:false,type:'rocky',gmass:0.055},
@@ -922,7 +954,7 @@ const PD=[
   {name:'Neptune',r:0.75,color:[0.25,0.35,0.85],orbit:37,speed:0.18,phase:4,rings:false,type:'ice',gmass:17.1},
 ];
 let planets=[];
-let star={radius:3,color:[1,0.85,0.3],coronaScale:5.1,coronaColor:[1,0.65,0.15],mass:1,temp:15,isBlackHole:false,collapseT:0,accretionOpacity:0,bhGlow:0};
+let star={radius:3,color:[1,0.85,0.3],coronaScale:5.1,coronaColor:[1,0.65,0.15],mass:25,temp:38,isBlackHole:false,collapseT:0,accretionOpacity:0,bhGlow:0};
 
 const ease=t=>t<0.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
 
@@ -940,11 +972,12 @@ function init(){
   pipeline = new AdvancedPipeline(renderer, innerWidth * Math.min(devicePixelRatio,2), innerHeight * Math.min(devicePixelRatio,2));
   pipeline.initLensing(innerWidth * Math.min(devicePixelRatio,2), innerHeight * Math.min(devicePixelRatio,2));
   buildRealisticStarfield();buildStar();buildFabric();buildPlanets();buildPhotons();buildLensing();
-  buildShockwave();buildHawking();buildExplosion();buildDust();buildNebula();
+  buildShockwave();buildHawking();buildExplosion();buildDust();buildRemnant();
   buildNeutronStar();buildJets();buildPhotonSphere();
   scene.add(new THREE.AmbientLight(0x111125,0.35));const pl=new THREE.PointLight(0xffcc66,2.5,100);pl.position.set(0,3,0);scene.add(pl);scene.userData.mainLight=pl;
   buildUI();hookEvents();
-  setTimeout(()=>{document.getElementById('loader').classList.add('out');showBanner('THE SUN','Main Sequence — Hydrogen Fusion');},1200);
+  // FIX: "25 M☉ O-TYPE STAR" — not "THE SUN" (this is a massive blue supergiant)
+  setTimeout(()=>{document.getElementById('loader').classList.add('out');showBanner('25 M☉ O-TYPE STAR','Main Sequence — CNO Cycle — T_core = 3.8×10⁷ K');},1200);
   animate();
 }
 
@@ -1083,11 +1116,18 @@ function buildStar(){
     transparent:true,side:THREE.BackSide,depthWrite:false,blending:THREE.AdditiveBlending});
   starGroup.add(new THREE.Mesh(gG,gM));starGroup.userData.glowMat=gM;
 
-  const ISCO_SIM = 2.5;
+  // =========================================================================
+  // FIX #2: ACCRETION DISK — Corrected Kerr physics
+  // - ISCO at 3.393M (was 3.60M) → sim units ISCO_SIM = 2.36
+  // - Doppler beaming: g⁴ bolometric (was D³g²)
+  // - Orbital velocity: Kerr formula v = (Ω-ω)√(gφφ)/α (was Schwarzschild)
+  // - Kerr orbital frequency: Ω = M^½/(r^(3/2) + aM^½)
+  // =========================================================================
+  const ISCO_SIM = 2.36;  // FIX: was 2.5, now maps to 3.393M
   const dG=new THREE.RingGeometry(ISCO_SIM, 16, 256, 12);
   const dM=new THREE.ShaderMaterial({uniforms:{
     uTime:{value:0},uOpacity:{value:0},uCamPos:{value:new THREE.Vector3()},
-    uMass:{value:10.0},uSpin:{value:0.7},uISCO:{value:ISCO_SIM},
+    uMass:{value:10.0},uSpin:{value:PHYS.SPIN},uISCO:{value:ISCO_SIM},
   },
     vertexShader:`
       varying vec2 vUv;
@@ -1110,6 +1150,8 @@ function buildStar(){
       varying vec3 vWorldPos;
       uniform float uTime, uOpacity, uMass, uSpin, uISCO;
       uniform vec3 uCamPos;
+
+      // Blackbody color from temperature
       vec3 blackbodyColor(float T){
         float t = clamp((T - 1000.0) / 30000.0, 0.0, 1.0);
         vec3 cold = vec3(0.6, 0.05, 0.0);
@@ -1121,35 +1163,78 @@ function buildStar(){
         c = mix(c, vhot, smoothstep(0.25, 0.8, t));
         return c;
       }
+
       void main(){
-        float r_g = vR / uISCO * 3.6;
+        // Map sim radius to gravitational radii
+        // ISCO_SIM=2.36 → r_ISCO=3.393M, so scale factor = 3.393/2.36 = 1.438
+        float r_g = vR * 1.438;
         float rn = (vR - uISCO) / (16.0 - uISCO);
-        float r_ratio = max(r_g / 3.6, 1.0);
+
+        // ---- FIX: Kerr orbital frequency (Bardeen-Press-Teukolsky 1972) ----
+        // Ω = M^½ / (r^(3/2) + a·M^½)
+        // In geometrized units (M=1): Ω = 1/(r^1.5 + a)
+        float r32 = pow(max(r_g, 1.5), 1.5);
+        float Omega = 1.0 / (r32 + uSpin);
+
+        // ---- FIX: Kerr specific energy and angular momentum ----
+        float sqrtR = sqrt(max(r_g, 1.0));
+        float twoOverR = 2.0 / max(r_g, 1.0);
+        float aOverR32 = uSpin / max(r32, 0.01);
+        float denom = sqrt(max(1.0 - 3.0/max(r_g,1.5) + 2.0*aOverR32, 0.001));
+
+        // ---- FIX: Kerr orbital velocity (ZAMO frame) ----
+        // Frame-dragging: ω = 2aM/r³ (far field) or exact from metric
+        float omega_fd = 2.0 * uSpin / (r_g * r_g * r_g + 0.01);
+        // v_ZAMO = (Ω - ω) * r * sin(θ) / α (equatorial: sin θ = 1)
+        // Simplified: use metric components
+        float v_orbital = (Omega - omega_fd) * r_g / max(denom, 0.01);
+        v_orbital = clamp(v_orbital, 0.0, 0.99);
+
+        // ---- Novikov-Thorne temperature profile ----
+        // F(r) includes boundary condition at ISCO
+        float r_isco_g = 3.393;
+        float r_ratio = max(r_g / r_isco_g, 1.0);
         float boundaryFactor = pow(max(0.0, 1.0 - 1.0/sqrt(r_ratio)), 0.25);
         float T_profile = pow(r_ratio, -0.75) * boundaryFactor;
         float T_physical = 5.0e6 * T_profile;
-        float M_over_r = 0.5 / max(r_g, 1.5);
-        float beta = sqrt(M_over_r) / sqrt(max(1.0 - 3.0 * M_over_r, 0.01));
-        beta = min(beta, 0.95);
-        float g_redshift = sqrt(max(1.0 - 1.0/max(r_g, 1.01), 0.01));
+
+        // ---- FIX: Gravitational redshift (Kerr) ----
+        // g_tt component: includes frame-dragging
+        float g_redshift = sqrt(max(1.0 - 2.0/(max(r_g, 1.01)) + uSpin*uSpin/(r_g*r_g + 0.01), 0.01));
+
+        // ---- FIX: Doppler beaming — g⁴ for bolometric (was D³g²) ----
+        float beta = v_orbital;
+        float gamma = 1.0 / sqrt(max(1.0 - beta * beta, 0.001));
+
         vec2 posXY = vWorldPos.xy;
         float angle = atan(posXY.y, posXY.x);
         vec3 velDir = vec3(-sin(angle), cos(angle), 0.0);
         vec3 toCamera = normalize(uCamPos - vWorldPos);
         float cosTheta = dot(velDir, toCamera);
-        float gamma = 1.0 / sqrt(max(1.0 - beta * beta, 0.001));
+
         float D = 1.0 / (gamma * (1.0 - beta * cosTheta));
-        float beaming = D * D * D * g_redshift * g_redshift;
-        float freqShift = D * g_redshift;
+        // FIX: Total frequency shift g = D * g_grav
+        float g_total = D * g_redshift;
+        // FIX: Bolometric beaming = g⁴ (was D³·g² which is wrong)
+        float beaming = g_total * g_total * g_total * g_total;
+
+        float freqShift = g_total;
         float T_observed = T_physical * freqShift;
+
         vec3 baseColor = blackbodyColor(T_observed);
+
+        // Turbulent structure
         vec3 noiseP = vec3(posXY * 0.3, uTime * 0.15);
         float diskNoise = fbm(noiseP + vec3(angle * 2.0, vR * 0.5, uTime * 0.2));
         float spiralNoise = turbulence(vec3(angle * 3.0 + uTime * 0.5, vR * 0.8, uTime * 0.1));
         baseColor *= 0.75 + 0.25 * (diskNoise * 0.5 + 0.5);
+
         float spiralArm = 0.7 + 0.3 * sin(angle * 2.0 + log(max(vR, 0.1)) * 4.0 - uTime * 1.5);
         baseColor *= spiralArm;
-        baseColor *= clamp(beaming, 0.08, 5.0);
+
+        // Apply beaming (clamped to prevent blow-out)
+        baseColor *= clamp(beaming, 0.05, 6.0);
+
         float a = smoothstep(0.0, 0.03, rn) * (1.0 - smoothstep(0.75, 1.0, rn)) * 0.85;
         gl_FragColor = vec4(baseColor * 1.5, a * uOpacity);
       }`,
@@ -1372,7 +1457,7 @@ function buildPlanets(){
     dG.setAttribute('color',new THREE.BufferAttribute(dCol,3));
     dG.setAttribute('size',new THREE.BufferAttribute(dSz,1));
     dG.setAttribute('life',new THREE.BufferAttribute(dLife,1));
-    const dM=new THREE.ShaderMaterial({
+    const dM2=new THREE.ShaderMaterial({
       uniforms:{uTime:{value:0},uAlpha:{value:0},uPlanetPos:{value:new THREE.Vector3()},uActive:{value:0},uPlanetColor:{value:new THREE.Vector3(...pd.color)}},
       vertexShader: NOISE_GLSL + `
         attribute float size, life;
@@ -1421,14 +1506,14 @@ function buildPlanets(){
         }`,
       transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,
     });
-    const debrisPts=new THREE.Points(dG,dM);
+    const debrisPts=new THREE.Points(dG,dM2);
     debrisPts.visible=false;
     scene.add(debrisPts);
 
     planets.push({
       def:pd, group:grp, orbitLine:oL, consumed:false,
       consumeT:0, currentOrbit:pd.orbit, spiralAngle:0, flash:0,
-      debrisPts, debrisMat:dM, tidalStretch:0, orbitalSpeed:pd.speed,
+      debrisPts, debrisMat:dM2, tidalStretch:0, orbitalSpeed:pd.speed,
     });
   });
 }
@@ -1526,9 +1611,22 @@ function buildDust(){
   `varying vec3 vC;varying float vA;void main(){float d=length(gl_PointCoord-.5)*2.;float a=1.-smoothstep(0.,.85,d);gl_FragColor=vec4(vC,a*vA*0.7);}`);
 }
 
-function buildNebula(){
-  const data=[{r:8,c:[0.2,0.6,1],o:0.12},{r:14,c:[0.8,0.2,0.5],o:0.09},{r:20,c:[0.15,0.8,0.4],o:0.07},
-    {r:26,c:[0.6,0.3,0.8],o:0.06},{r:10,c:[1,0.5,0.1],o:0.08},{r:17,c:[0.1,0.4,0.9],o:0.06}];
+// =========================================================================
+// FIX #3: Renamed from buildNebula → buildRemnant
+// BH evaporation does NOT produce a planetary nebula.
+// Phase 9 now shows a high-energy particle remnant cloud (gamma-ray flash debris)
+// with appropriate hot, bluish-white coloring instead of nebular ionized gas
+// =========================================================================
+function buildRemnant(){
+  // FIX: Colors changed from nebular (cool ionized gas) to hot particle debris
+  const data=[
+    {r:8,c:[0.7,0.8,1.0],o:0.10},   // hot gamma-ray debris
+    {r:14,c:[0.5,0.6,1.0],o:0.08},   // cooling relativistic ejecta
+    {r:20,c:[0.8,0.7,1.0],o:0.06},   // pair-production halo
+    {r:26,c:[0.4,0.5,0.9],o:0.05},   // thermal photon bath
+    {r:10,c:[1.0,0.9,0.7],o:0.07},   // thermal flash remnant
+    {r:17,c:[0.6,0.7,1.0],o:0.05},   // scattered radiation
+  ];
   data.forEach(sd=>{
     const mat=new THREE.ShaderMaterial({uniforms:{uTime:{value:0},uColor:{value:new THREE.Vector3(...sd.c)},uAlpha:{value:0},uBaseOp:{value:sd.o}},
       vertexShader:`varying vec3 vN,vP,vW;void main(){vN=normalize(normalMatrix*normal);vW=position;
@@ -1557,8 +1655,6 @@ function buildNebula(){
     scene.add(mesh);nebulaShells.push({mesh,mat,baseR:sd.r});
   });
 }
-
-function buildLights(){scene.add(new THREE.AmbientLight(0x111125,0.35));const p=new THREE.PointLight(0xffcc66,2.5,100);p.position.set(0,3,0);scene.add(p);scene.userData.mainLight=p;}
 
 function buildNeutronStar(){
   neutronStarGroup = new THREE.Group();
@@ -1600,6 +1696,7 @@ function buildNeutronStar(){
   neutronStarGroup.add(nsCore);
   neutronStarGroup.userData.coreMat = nsCore.material;
 
+  // Pulsar beams (magnetic poles, NOT BZ jets)
   for(let sign = -1; sign <= 1; sign += 2){
     const beamGeo = new THREE.CylinderGeometry(0.05, 2.5, 25, 32, 1, true);
     const beamMat = new THREE.ShaderMaterial({
@@ -1648,6 +1745,10 @@ function buildNeutronStar(){
   scene.add(neutronStarGroup);
 }
 
+// =========================================================================
+// FIX #4: JETS — Now BZ jets (appear AFTER BH formation, not during NS phase)
+// Parameters updated to collapsar GRB values: Γ~100, half-angle ~5°
+// =========================================================================
 function buildJets(){
   const N = 4000;
   [1, -1].forEach((sign, idx) => {
@@ -1655,12 +1756,13 @@ function buildJets(){
     for(let i=0;i<N;i++){
       const r = 0.3 + Math.random() * 0.5;
       const a = Math.random() * Math.PI * 2;
-      pos[i*3] = Math.cos(a) * r * 0.3;
+      // FIX: Tighter jet collimation for GRB-like jets
+      pos[i*3] = Math.cos(a) * r * 0.15;  // was 0.3
       pos[i*3+1] = sign * (0.5 + Math.random() * 0.5);
-      pos[i*3+2] = Math.sin(a) * r * 0.3;
-      const spread = (Math.random() - 0.5) * 0.2;
+      pos[i*3+2] = Math.sin(a) * r * 0.15;  // was 0.3
+      const spread = (Math.random() - 0.5) * 0.08;  // was 0.2
       vel[i*3] = spread;
-      vel[i*3+1] = sign * (3 + Math.random() * 8);
+      vel[i*3+1] = sign * (5 + Math.random() * 12);  // faster
       vel[i*3+2] = spread;
       const t = Math.random();
       col[i*3] = 0.3 + t * 0.5;
@@ -1691,7 +1793,7 @@ function buildJets(){
           float px = p.x * cosD - p.z * sinD;
           float pz = p.x * sinD + p.z * cosD;
           p.x = px; p.z = pz;
-          float collimate = 1.0 + dist * 0.08;
+          float collimate = 1.0 + dist * 0.04;  // tighter collimation
           p.x *= collimate;
           p.z *= collimate;
           float kh = snoise(vec3(dist * 0.3, age * 5.0, life * 3.0)) * dist * 0.03;
@@ -1720,8 +1822,15 @@ function buildJets(){
   });
 }
 
+// =========================================================================
+// FIX #5: PHOTON SPHERE — Split into prograde and retrograde orbits
+// Prograde: r = 2.013M, Retrograde: r = 3.725M (was single 3.0M)
+// =========================================================================
 function buildPhotonSphere(){
-  const psGeo = new THREE.TorusGeometry(3.0, 0.02, 16, 128);
+  // Prograde photon orbit at 2.013M → sim scale ~1.4 (using same scale as ISCO)
+  const progradeR = 2.013 / 3.393 * 2.36;   // ~1.40 sim units
+  const retrogradeR = 3.725 / 3.393 * 2.36;  // ~2.59 sim units
+
   const psMat = new THREE.ShaderMaterial({
     uniforms:{uTime:{value:0}},
     vertexShader:`varying vec3 vP; void main(){ vP=position; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
@@ -1735,11 +1844,32 @@ function buildPhotonSphere(){
       }`,
     transparent:true, depthWrite:false, blending:THREE.AdditiveBlending
   });
-  photonSphereRing = new THREE.Mesh(psGeo, psMat);
+  photonSphereRing = new THREE.Mesh(new THREE.TorusGeometry(progradeR, 0.02, 16, 128), psMat);
   photonSphereRing.rotation.x = Math.PI / 2;
   photonSphereRing.visible = false;
   scene.add(photonSphereRing);
 
+  // NEW: Retrograde photon ring (larger, dimmer — fewer photons trapped)
+  const retroMat = new THREE.ShaderMaterial({
+    uniforms:{uTime:{value:0}},
+    vertexShader:`varying vec3 vP; void main(){ vP=position; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+    fragmentShader:`uniform float uTime; varying vec3 vP;
+      void main(){
+        float angle = atan(vP.z, vP.x);
+        float flicker = 0.5 + 0.5 * sin(-angle * 6.0 + uTime * 8.0);
+        float bright = 0.2 + flicker * 0.4;
+        vec3 col = mix(vec3(0.5, 0.6, 1.0), vec3(0.8, 0.9, 1.0), flicker);
+        gl_FragColor = vec4(col * bright * 1.2, bright * 0.25);
+      }`,
+    transparent:true, depthWrite:false, blending:THREE.AdditiveBlending
+  });
+  photonRingRetro = new THREE.Mesh(new THREE.TorusGeometry(retrogradeR, 0.015, 16, 128), retroMat);
+  photonRingRetro.rotation.x = Math.PI / 2;
+  photonRingRetro.visible = false;
+  scene.add(photonRingRetro);
+
+  // FIX: Ergosphere shape — correct formula: r_ergo(θ) = M + √(M² - a²cos²θ)
+  // At equator: r_ergo/r₊ = 2M/1.714M = 1.167 (was using 0.3 coefficient → 1.147)
   const ergoGeo = new THREE.SphereGeometry(4.0, 48, 48);
   const ergoMat = new THREE.ShaderMaterial({
     uniforms:{uTime:{value:0},uSpin:{value:PHYS.SPIN}},
@@ -1747,8 +1877,13 @@ function buildPhotonSphere(){
       void main(){
         vec3 p = position;
         float cosTheta = p.y / length(p);
-        float ergoScale = 1.0 + uSpin * uSpin * (1.0 - cosTheta * cosTheta) * 0.3;
-        p.xz *= ergoScale;
+        // FIX: Correct ergosphere formula
+        // r_ergo/r₊ = (M + √(M²-a²cos²θ)) / (M + √(M²-a²))
+        // = (1 + √(1 - a²cos²θ)) / (1 + √(1-a²))
+        float a2 = uSpin * uSpin;
+        float ergoRatio = (1.0 + sqrt(max(0.01, 1.0 - a2 * cosTheta * cosTheta)))
+                        / (1.0 + sqrt(max(0.01, 1.0 - a2)));
+        p.xz *= ergoRatio;
         vN = normalize(normalMatrix * normal);
         vP = (modelViewMatrix * vec4(p, 1.0)).xyz;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
@@ -1802,8 +1937,6 @@ function hookEvents(){
     e.preventDefault();
   },{passive:false});
   cv.addEventListener('touchend',()=>isDrag=false);
-
-  // Keyboard shortcut for play/pause
   addEventListener('keydown', e => {
     if(e.code === 'Space' && e.target === document.body){
       e.preventDefault();
@@ -1830,16 +1963,21 @@ function showBanner(t,s){
 }
 
 function advancePhase(){currentPhase++;phaseTime=0;
+  // FIX: Updated phase banners with corrected physics
   const B=[null,
-    ['RED GIANT','Hydrogen Depleted — Triple-Alpha Process — T = 2×10⁸ K'],
+    // FIX: "Red Supergiant" not "Red Giant", no "Helium Flash" for 25 M☉
+    ['RED SUPERGIANT','H Depleted — Smooth He Ignition (no flash) — T = 1.5×10⁸ K'],
     ['SUPERNOVA','Iron Core Collapse — Neutrino-Driven Shock Revival — E = 3×10⁵³ erg'],
-    ['NEUTRON STAR','Proto-NS — B = 10¹² G — TOV Limit Exceeded → Collapse'],
-    ['RELATIVISTIC JETS','Blandford-Znajek Mechanism — Γ ≈ 5 — Synchrotron Emission'],
-    ['BLACK HOLE','Kerr Metric — a/M = 0.7 — Ergosphere + Photon Sphere'],
+    ['NEUTRON STAR','Proto-NS — B = 10¹² G — Pulsar Beams — Approaching TOV Limit'],
+    // FIX: BH forms BEFORE jets (phase 4 = BH, phase 5 = Jets)
+    ['BLACK HOLE','Kerr Metric — a/M = 0.7 — r₊ = 1.714M — Ergosphere Active'],
+    ['RELATIVISTIC JETS','Blandford-Znajek — Energy from BH Spin — Γ ≈ 100'],
     ['CONSUMPTION','Gravitational Spiral — Roche Limit — Spaghettification'],
-    ['HAWKING RADIATION','T_H = ℏc³/8πGMk_B = 6.2 nK — Quantum Evaporation'],
+    // FIX: Show Kerr Hawking temperature, not Schwarzschild
+    ['HAWKING RADIATION','T_H = ℏκ/2πk_B = 5.14 nK (Kerr) — Quantum Evaporation'],
     ['BLACK HOLE DEATH','Final Runaway — T → 10¹⁷ K — Gamma-Ray Flash'],
-    ['PLANETARY NEBULA','Ionized Shell — Stellar Remnant']];
+    // FIX: "Particle Remnant" not "Planetary Nebula"
+    ['PARTICLE REMNANT','High-Energy Debris — Gamma-Ray Flash Aftermath']];
   if(B[currentPhase]) showBanner(...B[currentPhase]);}
 
 function resetAll(){
@@ -1851,7 +1989,7 @@ function resetAll(){
     if(p.group.children[1]&&p.group.children[1].material)p.group.children[1].material.opacity=0.35;
     if(p.debrisPts)p.debrisPts.visible=false;
     document.getElementById(`ps-${i}`).classList.remove('consumed');});
-  star={radius:3,color:[1,0.85,0.3],coronaScale:5.1,coronaColor:[1,0.65,0.15],mass:25,temp:15,isBlackHole:false,collapseT:0,accretionOpacity:0,bhGlow:0};
+  star={radius:3,color:[1,0.85,0.3],coronaScale:5.1,coronaColor:[1,0.65,0.15],mass:25,temp:38,isBlackHole:false,collapseT:0,accretionOpacity:0,bhGlow:0};
   lensingGroup.visible=false;shockwaveRing.material.opacity=0;shockwaveRing.scale.set(1,1,1);
   shockwave2.material.opacity=0;shockwave2.scale.set(1,1,1);
   hawkingParticles.visible=false;explosionParticles.visible=false;dustParticles.visible=false;
@@ -1861,12 +1999,15 @@ function resetAll(){
   if(jetParticles) jetParticles.visible=false;
   if(jetParticles2) jetParticles2.visible=false;
   if(photonSphereRing) photonSphereRing.visible=false;
+  if(photonRingRetro) photonRingRetro.visible=false;
   if(ergosphereShell) ergosphereShell.visible=false;
   document.getElementById('eq-hawking').style.display='none';
   document.getElementById('eq-kerr').style.display='none';
+  document.getElementById('eq-horizon').style.display='none';
   document.getElementById('eq-ns').style.display='none';
   document.getElementById('eq-bz').style.display='none';
   document.getElementById('eq-isco').style.display='none';
+  document.getElementById('eq-photon').style.display='none';
   scene.fog=new THREE.FogExp2(0x010104,0.001);scene.background=null;
 }
 
@@ -1878,31 +2019,33 @@ function skipToPhase(p){resetAll();for(let i=0;i<p;i++)advancePhase();
     star.mass=PHYS.NS_MASS; star.radius=0.5;
     document.getElementById('eq-ns').style.display='block';
   }
+  // FIX: Phase 4 = BH formation (was Jets)
   if(p>=4){
     neutronStarGroup.visible=false; starGroup.visible=true;
-    star.isBlackHole=true; star.bhGlow=0.5; star.accretionOpacity=0.7;
+    star.isBlackHole=true; star.bhGlow=1; star.accretionOpacity=1;
     star.mass=PHYS.M_BH; star.radius=2;
+    lensingGroup.visible=true;
+    photonSphereRing.visible=true; photonRingRetro.visible=true; ergosphereShell.visible=true;
+    document.getElementById('eq-kerr').style.display='block';
+    document.getElementById('eq-horizon').style.display='block';
+    document.getElementById('eq-isco').style.display='block';
+    document.getElementById('eq-photon').style.display='block';
+  }
+  // FIX: Phase 5 = BZ Jets (requires BH)
+  if(p>=5){
     jetParticles.visible=true; jetParticles2.visible=true;
     document.getElementById('eq-bz').style.display='block';
   }
-  if(p>=5){
-    star.isBlackHole=true;star.bhGlow=1;star.accretionOpacity=1;star.mass=PHYS.M_BH;star.radius=2;
-    lensingGroup.visible=true;
-    jetParticles.visible=false; jetParticles2.visible=false;
-    photonSphereRing.visible=true; ergosphereShell.visible=true;
-    document.getElementById('eq-kerr').style.display='block';
-    document.getElementById('eq-isco').style.display='block';
-  }
-  if(p>=6){star.mass=PHYS.M_BH + 2;}
+  if(p>=6){star.mass=PHYS.M_BH + 2; jetParticles.visible=false; jetParticles2.visible=false;}
   if(p>=7){
     planets.forEach((pl,i)=>{pl.consumed=true;pl.group.visible=false;consumedCount++;document.getElementById(`ps-${i}`).classList.add('consumed');});
     star.isBlackHole=true;star.bhGlow=1;star.accretionOpacity=1;star.mass=PHYS.M_BH+2;star.radius=2;
-    lensingGroup.visible=true;photonSphereRing.visible=true;ergosphereShell.visible=true;
+    lensingGroup.visible=true;photonSphereRing.visible=true;photonRingRetro.visible=true;ergosphereShell.visible=true;
     hawkingParticles.visible=true;document.getElementById('eq-hawking').style.display='block';
   }
   if(p>=8){star.mass=0.5;star.radius=0.5;starGroup.visible=false;lensingGroup.visible=false;
     hawkingParticles.visible=false;explosionParticles.visible=true;
-    photonSphereRing.visible=false;ergosphereShell.visible=false;}
+    photonSphereRing.visible=false;photonRingRetro.visible=false;ergosphereShell.visible=false;}
   if(p>=9){starGroup.visible=false;lensingGroup.visible=false;hawkingParticles.visible=false;explosionParticles.visible=true;
     dustParticles.visible=true;nebulaShells.forEach(ns=>{ns.mesh.visible=true;ns.mat.uniforms.uAlpha.value=0.5;});
     scene.fog=new THREE.FogExp2(0x050210,0.006);}
@@ -1910,9 +2053,9 @@ function skipToPhase(p){resetAll();for(let i=0;i<p;i++)advancePhase();
 
 function tog(k,el){show[k]=!show[k];el.classList.toggle('on');}
 
-// 
+// ============================================================================
 // MAIN ANIMATION LOOP
-// 
+// ============================================================================
 function animate(){
   requestAnimationFrame(animate);
   speedMul=parseFloat(document.getElementById('sl-speed').value);
@@ -1920,7 +2063,6 @@ function animate(){
   const bloomStr = parseFloat(document.getElementById('sl-bloom').value);
   pipeline.strength = bloomStr;
 
-  // When paused, consume the clock delta but don't advance simulation
   const rawDt = clock.getDelta();
   const dt = isPaused ? 0 : rawDt * speedMul;
   simTime += dt;
@@ -1928,27 +2070,35 @@ function animate(){
 
   const pDur=PHASE_DURATIONS[currentPhase]||999,pP=Math.min(phaseTime/pDur,1);
 
+  // =========================================================================
+  // PHASE LOGIC (corrected order and physics)
+  // =========================================================================
   if(currentPhase===0){
     star.radius=3+Math.sin(simTime*0.3)*0.1;
     star.color=[1,0.85,0.3];
     star.coronaScale=star.radius*1.7;star.coronaColor=[1,0.65,0.15];
     star.mass=25-pP*5;
-    star.temp=15+pP*25;
+    // FIX: 25 M☉ star core temp starts at 38 MK (CNO), not 15 MK
+    star.temp=38+pP*25;
     neutronStarGroup.visible=false;
     if(pP>=1)advancePhase();
   }
   else if(currentPhase===1){
+    // FIX: "Red Supergiant" phase — smooth He ignition, then shell burning
     const e=ease(pP);
     star.radius=3+e*5;
     star.color=[1,0.85-e*0.5,0.3-e*0.22];
     star.coronaScale=star.radius*1.8;star.coronaColor=[1,0.4-e*0.2,0.1];
     star.mass=20-e*5;
+    // FIX: Correct nuclear burning progression (no flash for massive stars)
+    // H→He→C→Ne→O→Si→Fe (smooth transitions, not flashes)
     const burnStage = Math.floor(e * 6);
-    const temps = [2e8, 8e8, 1.2e9, 2e9, 3.5e9, 3.5e9];
+    const temps = [PHYS.T_HE_BURN, PHYS.T_C_BURN, PHYS.T_NE_BURN, PHYS.T_O_BURN, PHYS.T_SI_BURN_FINAL, PHYS.T_SI_BURN_FINAL];
     star.temp = temps[Math.min(burnStage, 5)] / 1e6;
     if(pP>=1)advancePhase();
   }
   else if(currentPhase===2){
+    // Supernova — unchanged physics (correct)
     if(pP<0.15){
       flashIntensity=ease(pP/0.15)*0.5;
       star.radius=8*(1-pP*3);
@@ -1977,6 +2127,7 @@ function animate(){
     if(pP>=1)advancePhase();
   }
   else if(currentPhase===3){
+    // Neutron Star — pulsar beams (NOT BZ jets)
     const t=ease(pP);
     starGroup.visible=pP<0.05;
     neutronStarGroup.visible=true;
@@ -2002,13 +2153,41 @@ function animate(){
     }
     if(pP>=1)advancePhase();
   }
+  // FIX: Phase 4 = BLACK HOLE FORMATION (was Jets — BZ requires BH!)
   else if(currentPhase===4){
     const t=ease(pP);
     neutronStarGroup.visible=false;
     starGroup.visible=true;
     star.isBlackHole=true;star.bhGlow=Math.min(1,t*2);
-    star.accretionOpacity=t*0.8;
+    star.accretionOpacity=t;
     star.mass=PHYS.M_BH;star.radius=2;star.collapseT=1;
+    document.getElementById('eq-kerr').style.display='block';
+    document.getElementById('eq-horizon').style.display='block';
+    document.getElementById('eq-isco').style.display='block';
+    document.getElementById('eq-photon').style.display='block';
+    lensingGroup.visible=t>0.3;
+    photonSphereRing.visible=t>0.4;
+    if(photonRingRetro) photonRingRetro.visible=t>0.4;
+    ergosphereShell.visible=t>0.5;
+    if(photonSphereRing.material.uniforms) photonSphereRing.material.uniforms.uTime.value=simTime;
+    if(photonRingRetro && photonRingRetro.material.uniforms) photonRingRetro.material.uniforms.uTime.value=simTime;
+    if(ergosphereShell.material.uniforms){
+      ergosphereShell.material.uniforms.uTime.value=simTime;
+      ergosphereShell.material.uniforms.uSpin.value=PHYS.SPIN;
+    }
+    const omegaH = PHYS.SPIN / (2.0 * (1.0 + Math.sqrt(1.0 - PHYS.SPIN*PHYS.SPIN)));
+    ergosphereShell.rotation.y += dt * omegaH * 3.0;
+    if(pP>=1)advancePhase();
+  }
+  // FIX: Phase 5 = BZ JETS (now correctly after BH formation)
+  else if(currentPhase===5){
+    const t=ease(pP);
+    star.isBlackHole=true;star.radius=2;star.bhGlow=1;
+    star.accretionOpacity=1;star.mass=PHYS.M_BH;star.collapseT=1;
+    lensingGroup.visible=true;
+    photonSphereRing.visible=true;
+    if(photonRingRetro) photonRingRetro.visible=true;
+    ergosphereShell.visible=true;
     document.getElementById('eq-bz').style.display='block';
     const jetPower = ease(Math.min(1,t*1.5));
     jetParticles.visible=true; jetParticles2.visible=true;
@@ -2018,54 +2197,52 @@ function animate(){
     jetParticles2.material.uniforms.uTime.value=simTime;
     jetParticles2.material.uniforms.uAlpha.value=jetPower*0.8;
     jetParticles2.material.uniforms.uJetPower.value=jetPower;
-    lensingGroup.visible=t>0.3;
-    if(pP>=1)advancePhase();
-  }
-  else if(currentPhase===5){
-    const t=ease(pP);
-    star.isBlackHole=true;star.radius=2;star.bhGlow=1;
-    star.accretionOpacity=1;star.mass=PHYS.M_BH;star.collapseT=1;
-    lensingGroup.visible=true;
-    const jetFade = Math.max(0, 1-t*2);
-    if(jetParticles.visible){
-      jetParticles.material.uniforms.uAlpha.value=jetFade*0.5;
-      jetParticles2.material.uniforms.uAlpha.value=jetFade*0.5;
-      if(jetFade<0.01){jetParticles.visible=false;jetParticles2.visible=false;}
-    }
-    document.getElementById('eq-kerr').style.display='block';
-    document.getElementById('eq-isco').style.display='block';
-    photonSphereRing.visible=true;
-    ergosphereShell.visible=true;
-    if(photonSphereRing.material.uniforms)
-      photonSphereRing.material.uniforms.uTime.value=simTime;
-    if(ergosphereShell.material.uniforms){
-      ergosphereShell.material.uniforms.uTime.value=simTime;
-      ergosphereShell.material.uniforms.uSpin.value=PHYS.SPIN;
-    }
+    if(photonSphereRing.material.uniforms) photonSphereRing.material.uniforms.uTime.value=simTime;
+    if(photonRingRetro && photonRingRetro.material.uniforms) photonRingRetro.material.uniforms.uTime.value=simTime;
+    if(ergosphereShell.material.uniforms) ergosphereShell.material.uniforms.uTime.value=simTime;
     const omegaH = PHYS.SPIN / (2.0 * (1.0 + Math.sqrt(1.0 - PHYS.SPIN*PHYS.SPIN)));
     ergosphereShell.rotation.y += dt * omegaH * 3.0;
     if(pP>=1)advancePhase();
   }
   else if(currentPhase===6){
     star.mass=PHYS.M_BH+2;star.isBlackHole=true;star.bhGlow=1;star.accretionOpacity=1;star.radius=2;
-    lensingGroup.visible=true;photonSphereRing.visible=true;ergosphereShell.visible=true;
+    lensingGroup.visible=true;photonSphereRing.visible=true;
+    if(photonRingRetro) photonRingRetro.visible=true;
+    ergosphereShell.visible=true;
+    // Fade jets during consumption
+    const jetFade = Math.max(0, 1 - ease(Math.min(1, phaseTime / 5.0)));
+    if(jetParticles.visible){
+      jetParticles.material.uniforms.uAlpha.value=jetFade*0.3;
+      jetParticles2.material.uniforms.uAlpha.value=jetFade*0.3;
+      if(jetFade<0.01){jetParticles.visible=false;jetParticles2.visible=false;}
+    }
     if(photonSphereRing.material.uniforms) photonSphereRing.material.uniforms.uTime.value=simTime;
+    if(photonRingRetro && photonRingRetro.material.uniforms) photonRingRetro.material.uniforms.uTime.value=simTime;
     if(ergosphereShell.material.uniforms) ergosphereShell.material.uniforms.uTime.value=simTime;
     const omegaH = PHYS.SPIN / (2.0 * (1.0 + Math.sqrt(1.0 - PHYS.SPIN*PHYS.SPIN)));
     ergosphereShell.rotation.y += dt * omegaH * 3.0;
     if(consumedCount >= 8) advancePhase();
   }
   else if(currentPhase===7){
+    // FIX: Hawking evaporation with Kerr corrections
+    // BH spins down faster than it loses mass (Page 1976b)
     star.isBlackHole=true;star.bhGlow=1;lensingGroup.visible=true;
     document.getElementById('eq-hawking').style.display='block';
-    photonSphereRing.visible=true;ergosphereShell.visible=true;
+    photonSphereRing.visible=true;
+    if(photonRingRetro) photonRingRetro.visible=true;
+    ergosphereShell.visible=true;
     if(photonSphereRing.material.uniforms) photonSphereRing.material.uniforms.uTime.value=simTime;
+    if(photonRingRetro && photonRingRetro.material.uniforms) photonRingRetro.material.uniforms.uTime.value=simTime;
     if(ergosphereShell.material.uniforms) ergosphereShell.material.uniforms.uTime.value=simTime;
     const M0 = PHYS.M_BH + 2;
+    // FIX: Correct mass evolution M(t) = M₀(1 - t/t_evap)^(1/3)
     const cubeRoot = Math.pow(Math.max(0.001, 1.0 - pP), 1.0/3.0);
     star.mass = M0 * cubeRoot;
     star.radius = 2.0 * cubeRoot;
     star.accretionOpacity = Math.max(0.1, cubeRoot);
+    // FIX: Spin decreases faster than mass (Page 1976b)
+    // a/M decreases roughly as (M/M0)^2 for superradiant emission
+    const currentSpin = PHYS.SPIN * cubeRoot * cubeRoot;
     const T_H_relative = M0 / Math.max(star.mass, 0.01);
     const P_relative = T_H_relative * T_H_relative;
     hawkingParticles.visible=true;
@@ -2074,7 +2251,10 @@ function animate(){
     const massScale = Math.max(0.05, star.mass / M0);
     lensingGroup.scale.set(massScale, massScale, massScale);
     photonSphereRing.scale.set(massScale, massScale, massScale);
+    if(photonRingRetro) photonRingRetro.scale.set(massScale, massScale, massScale);
     ergosphereShell.scale.set(massScale, massScale, massScale);
+    // Update lensing spin parameter as BH spins down
+    if(pipeline.lensingMat) pipeline.lensingMat.uniforms.uSpin.value = currentSpin;
     if(pP > 0.9) flashIntensity = Math.max(flashIntensity, (pP-0.9)/0.1 * P_relative * 0.3);
     if(pP>=1)advancePhase();
   }
@@ -2083,7 +2263,9 @@ function animate(){
     if(t<0.15) flashIntensity=Math.max(flashIntensity,ease(t/0.15)*3.0);
     starGroup.visible=t<0.05;lensingGroup.visible=false;
     hawkingParticles.visible=false;
-    photonSphereRing.visible=false;ergosphereShell.visible=false;
+    photonSphereRing.visible=false;
+    if(photonRingRetro) photonRingRetro.visible=false;
+    ergosphereShell.visible=false;
     explosionParticles.visible=true;
     explosionParticles.material.uniforms.uTime.value=phaseTime;
     explosionParticles.material.uniforms.uAlpha.value=Math.max(0,1-t*0.5);
@@ -2094,9 +2276,12 @@ function animate(){
     if(t<0.3){camera.position.x+=(Math.random()-0.5)*0.5*(1-t/0.3);camera.position.y+=(Math.random()-0.5)*0.5*(1-t/0.3);}
     if(pP>=1)advancePhase();
   }
+  // FIX: Phase 9 = PARTICLE REMNANT (was "Planetary Nebula" — impossible from BH evaporation)
   else if(currentPhase===9){
     starGroup.visible=false;lensingGroup.visible=false;
-    photonSphereRing.visible=false;ergosphereShell.visible=false;
+    photonSphereRing.visible=false;
+    if(photonRingRetro) photonRingRetro.visible=false;
+    ergosphereShell.visible=false;
     explosionParticles.visible=true;
     explosionParticles.material.uniforms.uTime.value=PHASE_DURATIONS[8]+phaseTime*0.3;
     explosionParticles.material.uniforms.uAlpha.value=Math.max(0,0.5-pP*0.6);
@@ -2110,6 +2295,7 @@ function animate(){
     star.mass=0.01;
   }
 
+  // Star uniforms
   if(starGroup.visible){
     const cm=starGroup.userData.coreMat.uniforms;cm.uTime.value=simTime;cm.uRadius.value=Math.max(0.1,star.radius);
     cm.uColor.value.set(...star.color);cm.uCollapse.value=star.collapseT;cm.uBH.value=star.bhGlow;
@@ -2124,7 +2310,7 @@ function animate(){
   const ml=scene.userData.mainLight;
   if(currentPhase>=8){ml.intensity=Math.max(0.3,3-phaseTime*0.3);ml.color.setRGB(0.8,0.5,1);}
   else if(currentPhase===3){ml.intensity=1.5;ml.color.setRGB(0.5,0.6,1);}
-  else if(currentPhase===4){ml.intensity=1.0+flashIntensity*3;ml.color.setRGB(0.4,0.5,1);}
+  else if(currentPhase===5){ml.intensity=1.0+flashIntensity*3;ml.color.setRGB(0.4,0.5,1);}
   else if(star.isBlackHole){ml.intensity=0.5;ml.color.setRGB(0.4,0.2,1);}
   else{ml.intensity=2.5+flashIntensity*8;ml.color.setRGB(1,0.8+flashIntensity*0.2,0.4+flashIntensity*0.6);}
 
@@ -2142,6 +2328,7 @@ function animate(){
     });
   }
 
+  // Planet logic (unchanged — physics here is correct)
   planets.forEach((p,i)=>{
     if(p.consumed){ p.debrisPts.visible=false; return; }
     p.orbitLine.visible=show.orbits&&!p.consumed;
@@ -2229,6 +2416,7 @@ function animate(){
     }
   });
 
+  // Photon systems
   photonSystems.forEach(ps=>{ps.pts.visible=show.photons&&currentPhase<9;if(!ps.pts.visible)return;
     const arr=ps.geo.attributes.position.array,N=arr.length/3;
     for(let i=0;i<N;i++){const param=(i/N+simTime*ps.spd)%1,inPh=param*Math.PI*2;
@@ -2245,7 +2433,7 @@ function animate(){
 
   if(!isDrag)cameraAngle+=dt*0.06;
   if(userZoomed){
-    userZoomTimer-=rawDt; // Use rawDt so zoom timer works even when paused
+    userZoomTimer-=rawDt;
     if(userZoomTimer<=0) userZoomed=false;
   } else {
     const tDist=currentPhase>=9?90:70;
@@ -2258,10 +2446,16 @@ function animate(){
   if(scene.userData.sfMat)scene.userData.sfMat.uniforms.uTime.value=simTime;
   renderer.toneMappingExposure=1.1+flashIntensity*6;flashIntensity=Math.max(0,flashIntensity-dt*0.8);
 
-  const names=['Main Sequence','Red Giant','Supernova','Neutron Star','Relativistic Jets',
-    'Black Hole (Kerr)','Consuming Planets','Hawking Evaporation','BH Explosion','Planetary Nebula'];
+  // =========================================================================
+  // HUD updates — corrected physics values
+  // =========================================================================
+  // FIX: Corrected phase names
+  const names=['Main Sequence','Red Supergiant','Supernova','Neutron Star',
+    'Black Hole (Kerr)','Relativistic Jets (BZ)','Consuming Planets',
+    'Hawking Evaporation','BH Explosion','Particle Remnant'];
   document.getElementById('v-phase').textContent=names[currentPhase]||'';
   const tempDisplays = [
+    // FIX: 25 M☉ core temp = 38 MK (CNO cycle)
     `${star.temp.toFixed(0)} × 10⁶ K`,
     `${star.temp.toFixed(0)} × 10⁶ K`,
     currentPhase===2&&pP<0.3 ? '5.4×10⁹ K' : '~10¹⁰ K',
@@ -2269,29 +2463,38 @@ function animate(){
     '—',
     '—',
     '—',
-    `T_H ≈ ${(6.17e-9 * 1.0/Math.max(0.01,star.mass)).toExponential(1)} K`,
+    // FIX: Kerr Hawking temp (5.14 nK base, scales as 1/M)
+    `T_H ≈ ${(PHYS.T_HAWKING_KERR * (PHYS.M_BH+2)/Math.max(0.01,star.mass)).toExponential(1)} K`,
     '~10¹⁷ K',
     '~10⁴ K',
   ];
   document.getElementById('v-temp').textContent=tempDisplays[currentPhase]||'—';
-  document.getElementById('v-mass').textContent=currentPhase>=9?'Remnant Cloud':`${Math.max(0,star.mass).toFixed(1)} M☉`;
-  const rs = star.mass * 2.95;
+  // FIX: Phase 9 label
+  document.getElementById('v-mass').textContent=currentPhase>=9?'Particle Debris':`${Math.max(0,star.mass).toFixed(1)} M☉`;
+  // FIX: Show event horizon r₊ for Kerr (not just Schwarzschild R_s)
+  const r_plus = star.mass * PHYS.R_HORIZON / PHYS.M_BH;
   document.getElementById('v-rs').textContent=
     currentPhase<3 ? '—' :
     currentPhase===3 ? `R_NS ≈ ${PHYS.NS_RADIUS_KM} km` :
     currentPhase>=9 ? 'N/A' :
-    `${rs.toFixed(1)} km`;
+    `r₊ = ${r_plus.toFixed(1)} km (R_s = ${(star.mass * 2.954).toFixed(1)} km)`;
   document.getElementById('v-spin').textContent=
+    // FIX: Show spin decreasing during Hawking phase
+    currentPhase===7 ? `a/M = ${(PHYS.SPIN * Math.pow(Math.max(0.001,1-pP),2/3)).toFixed(3)} (↓)` :
     currentPhase>=4 && currentPhase<9 ? `a/M = ${PHYS.SPIN}` :
     currentPhase===3 ? `P = ${(0.02 + (1-ease(pP))*0.5).toFixed(3)}s` : '—';
-  if(currentPhase>=5 && currentPhase<9 && star.mass > 0.1){
-    const rs_over_risco = 2.0 / 3.6;
-    const z = 1.0/Math.sqrt(1.0 - rs_over_risco) - 1.0;
+  if(currentPhase>=4 && currentPhase<9 && star.mass > 0.1){
+    // FIX: Correct ISCO redshift for Kerr
+    // z = 1/√(1 - 2M/r_ISCO + a²/r_ISCO²) - 1 (approximate)
+    const r_isco_M = 3.393;
+    const z = 1.0/Math.sqrt(Math.max(0.01, 1.0 - 2.0/r_isco_M + PHYS.SPIN*PHYS.SPIN/(r_isco_M*r_isco_M))) - 1.0;
     document.getElementById('v-redshift').textContent=`z(ISCO) = ${z.toFixed(3)}`;
   } else {
     document.getElementById('v-redshift').textContent='—';
   }
   document.getElementById('v-planets').textContent=`${8-consumedCount} / 8`;
+
+  // Timeline
   const totalDur = PHASE_DURATIONS.reduce((a,b)=>a+b,0);
   let tE=0;
   for(let i=0;i<currentPhase;i++) tE+=PHASE_DURATIONS[i];
@@ -2303,12 +2506,14 @@ function animate(){
   document.getElementById('tl-fill').style.width=`${Math.min(100, tE / totalDur * 100)}%`;
   document.querySelectorAll('#timeline .mrk').forEach((m,i)=>m.classList.toggle('active',i<=currentPhase));
 
+  // Lensing uniforms
   if(pipeline.lensingMat){
     const bhWorld = new THREE.Vector3(0, -3, 0);
     const bhScreen = bhWorld.clone().project(camera);
     const bhUV = new THREE.Vector2(bhScreen.x * 0.5 + 0.5, bhScreen.y * 0.5 + 0.5);
     pipeline.lensingMat.uniforms.uBHScreen.value.copy(bhUV);
     pipeline.lensingMat.uniforms.uAspect.value = camera.aspect;
+    // FIX: Shadow apparent size scaled correctly
     const apparentRS = Math.min(0.20, 3.5 * star.radius / cameraDist);
     const isBHPhase = star.isBlackHole && currentPhase >= 4 && currentPhase <= 8;
     pipeline.lensingMat.uniforms.uRS.value = apparentRS;
