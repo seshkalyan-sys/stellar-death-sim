@@ -462,7 +462,7 @@
   </div>
   <div class="sld"><label>Speed</label><input type="range" id="sl-speed" min="0.2" max="5" value="1" step="0.1"></div>
   <div class="sld"><label>Wave Freq</label><input type="range" id="sl-wave" min="2" max="25" value="10" step="1"></div>
-  <div class="sld"><label>Bloom</label><input type="range" id="sl-bloom" min="0" max="3" value="1.2" step="0.1"></div>
+  <div class="sld"><label>Bloom ×</label><input type="range" id="sl-bloom" min="0" max="2" value="1.0" step="0.05"></div>
   <div class="ctrl-row" style="margin-top:6px">
     <!-- FIX: Reordered phases — Jets come AFTER BH (BZ mechanism requires BH ergosphere) -->
     <span class="btn" onclick="skipToPhase(0)">Star</span>
@@ -2025,7 +2025,9 @@ function skipToPhase(p){resetAll();for(let i=0;i<p;i++)advancePhase();
     star.isBlackHole=true; star.bhGlow=1; star.accretionOpacity=1;
     star.mass=PHYS.M_BH; star.radius=2;
     lensingGroup.visible=true;
-    photonSphereRing.visible=true; photonRingRetro.visible=true; ergosphereShell.visible=true;
+    if(photonSphereRing) photonSphereRing.visible=true;
+    if(photonRingRetro) photonRingRetro.visible=true;
+    if(ergosphereShell) ergosphereShell.visible=true;
     document.getElementById('eq-kerr').style.display='block';
     document.getElementById('eq-horizon').style.display='block';
     document.getElementById('eq-isco').style.display='block';
@@ -2033,19 +2035,25 @@ function skipToPhase(p){resetAll();for(let i=0;i<p;i++)advancePhase();
   }
   // FIX: Phase 5 = BZ Jets (requires BH)
   if(p>=5){
-    jetParticles.visible=true; jetParticles2.visible=true;
+    if(jetParticles) jetParticles.visible=true;
+    if(jetParticles2) jetParticles2.visible=true;
     document.getElementById('eq-bz').style.display='block';
   }
-  if(p>=6){star.mass=PHYS.M_BH + 2; jetParticles.visible=false; jetParticles2.visible=false;}
+  if(p>=6){star.mass=PHYS.M_BH + 2; if(jetParticles) jetParticles.visible=false; if(jetParticles2) jetParticles2.visible=false;}
   if(p>=7){
     planets.forEach((pl,i)=>{pl.consumed=true;pl.group.visible=false;consumedCount++;document.getElementById(`ps-${i}`).classList.add('consumed');});
     star.isBlackHole=true;star.bhGlow=1;star.accretionOpacity=1;star.mass=PHYS.M_BH+2;star.radius=2;
-    lensingGroup.visible=true;photonSphereRing.visible=true;photonRingRetro.visible=true;ergosphereShell.visible=true;
+    lensingGroup.visible=true;
+    if(photonSphereRing) photonSphereRing.visible=true;
+    if(photonRingRetro) photonRingRetro.visible=true;
+    if(ergosphereShell) ergosphereShell.visible=true;
     hawkingParticles.visible=true;document.getElementById('eq-hawking').style.display='block';
   }
   if(p>=8){star.mass=0.5;star.radius=0.5;starGroup.visible=false;lensingGroup.visible=false;
     hawkingParticles.visible=false;explosionParticles.visible=true;
-    photonSphereRing.visible=false;photonRingRetro.visible=false;ergosphereShell.visible=false;}
+    if(photonSphereRing) photonSphereRing.visible=false;
+    if(photonRingRetro) photonRingRetro.visible=false;
+    if(ergosphereShell) ergosphereShell.visible=false;}
   if(p>=9){starGroup.visible=false;lensingGroup.visible=false;hawkingParticles.visible=false;explosionParticles.visible=true;
     dustParticles.visible=true;nebulaShells.forEach(ns=>{ns.mesh.visible=true;ns.mat.uniforms.uAlpha.value=0.5;});
     scene.fog=new THREE.FogExp2(0x050210,0.006);}
@@ -2060,8 +2068,7 @@ function animate(){
   requestAnimationFrame(animate);
   speedMul=parseFloat(document.getElementById('sl-speed').value);
   waveFreq=parseInt(document.getElementById('sl-wave').value);
-  const bloomStr = parseFloat(document.getElementById('sl-bloom').value);
-  pipeline.strength = bloomStr;
+  const bloomUserMul = parseFloat(document.getElementById('sl-bloom').value);
 
   const rawDt = clock.getDelta();
   const dt = isPaused ? 0 : rawDt * speedMul;
@@ -2069,6 +2076,199 @@ function animate(){
   phaseTime += dt;
 
   const pDur=PHASE_DURATIONS[currentPhase]||999,pP=Math.min(phaseTime/pDur,1);
+
+  // =========================================================================
+  // PHYSICS-GROUNDED ADAPTIVE BLOOM
+  // 
+  // Bloom simulates optical scattering (atmospheric, instrumental, retinal).
+  // Different astrophysical phenomena have vastly different luminosity profiles:
+  //
+  // - Main sequence star: moderate surface luminosity, broad soft corona.
+  //   L ≈ 80,000 L☉ for 25 M☉. Bloom should give gentle atmospheric halo.
+  //
+  // - Red supergiant: lower surface temperature but enormous radius → extended
+  //   diffuse glow. Lower threshold catches the cooler extended envelope.
+  //
+  // - Supernova: briefly 10⁹-10¹⁰ L☉, outshines entire galaxy. Peak luminosity
+  //   demands maximum bloom with tight core + broad halo (high radius).
+  //   The neutrino burst at core bounce is invisible but the photospheric
+  //   breakout creates the visual flash.
+  //
+  // - Neutron star: tiny (R~12km) but T~10¹¹K at birth → extreme surface
+  //   brightness concentrated in a small area. Pulsar beams are coherent
+  //   synchrotron emission — tight, intense bloom with high threshold.
+  //
+  // - Black hole + accretion disk: the approaching side of the disk is
+  //   Doppler-boosted by g⁴ (up to ~6× for v~0.5c). This creates extreme
+  //   contrast between approaching and receding sides. Bloom should have
+  //   moderate threshold to catch the boosted side while letting the
+  //   receding side stay dim. The photon ring is narrow and bright.
+  //
+  // - BZ Jets: relativistic synchrotron emission, Γ~100. Highly collimated
+  //   and beamed — moderate strength but tight radius (jet is narrow).
+  //
+  // - Hawking radiation: T_H ≈ 5.14 nK for 10 M☉ Kerr — this is 5×10⁸
+  //   times COLDER than the CMB (2.725 K). A stellar-mass BH emitting
+  //   Hawking radiation is essentially invisible. Peak wavelength ~470 km
+  //   (radio waves larger than cities). Bloom should be minimal/absent
+  //   until the final runaway when T→10¹⁷K and M→0.
+  //
+  // - BH explosion: final ~10⁻²⁷s releases ~10⁹ J as gamma rays.
+  //   Brief, extreme bloom — comparable to supernova peak.
+  //
+  // - Particle remnant: expanding thermal debris, rapidly cooling.
+  //   Gentle diffuse bloom, fading.
+  // =========================================================================
+
+  let bloomThreshold, bloomStrength, bloomRadius;
+
+  if(currentPhase === 0){
+    // Main sequence 25 M☉: L ≈ 80,000 L☉, T_eff ≈ 40,000K (O-type)
+    // Hot blue star — moderate corona, clean atmospheric scattering
+    bloomThreshold = 0.75;
+    bloomStrength = 0.8;
+    bloomRadius = 0.5;
+  }
+  else if(currentPhase === 1){
+    // Red supergiant: R ≈ 1000 R☉, T_eff ≈ 3500K, L ≈ 100,000 L☉
+    // Enormous diffuse photosphere — low threshold catches extended envelope
+    // Broad halo (high radius) from the sheer angular size
+    const e = ease(pP);
+    bloomThreshold = 0.65 - e * 0.15;   // drops to 0.50 as envelope expands
+    bloomStrength = 0.9 + e * 0.4;       // grows to 1.3
+    bloomRadius = 0.55 + e * 0.25;       // broadens to 0.80
+  }
+  else if(currentPhase === 2){
+    // Supernova: L_peak ≈ 10⁹-10¹⁰ L☉
+    // Three sub-phases: collapse, bounce flash, shock breakout
+    if(pP < 0.15){
+      // Iron core collapse — dimming as photosphere falls inward
+      bloomThreshold = 0.60;
+      bloomStrength = 0.7;
+      bloomRadius = 0.5;
+    } else if(pP < 0.3){
+      // Shock breakout + neutrino-heated envelope — MAXIMUM luminosity
+      // This is the brightest moment in the entire simulation
+      const bt = (pP - 0.15) / 0.15;
+      bloomThreshold = 0.35 - bt * 0.15;  // very low — everything glows
+      bloomStrength = 1.5 + bt * 1.8;      // peaks at 3.3
+      bloomRadius = 0.7 + bt * 0.3;        // broad wash: 1.0
+    } else {
+      // Expanding ejecta — luminosity powered by ⁵⁶Ni → ⁵⁶Co → ⁵⁶Fe decay
+      // Gradual decline over weeks (compressed to seconds here)
+      const ct = (pP - 0.3) / 0.7;
+      bloomThreshold = 0.40 + ct * 0.35;   // rises back to 0.75
+      bloomStrength = 2.5 * (1 - ct * 0.7); // fades from 2.5 to 0.75
+      bloomRadius = 0.8 - ct * 0.25;        // tightens to 0.55
+    }
+  }
+  else if(currentPhase === 3){
+    // Neutron star: R = 12 km, T = 10¹¹ K (birth) → 10¹⁰ K
+    // Tiny but incredibly hot — high surface brightness, compact bloom
+    // Pulsar beams: coherent synchrotron, tight and intense
+    const t = ease(pP);
+    bloomThreshold = 0.80 - t * 0.1;    // high — only beams and hot surface
+    bloomStrength = 1.0 + t * 0.5;       // moderate, grows as beams intensify
+    bloomRadius = 0.35 + t * 0.1;        // tight — small source
+  }
+  else if(currentPhase === 4){
+    // Black hole formation: accretion disk spinning up
+    // Disk luminosity L = ηṀc² where η ≈ 0.10 for a/M=0.7
+    // Doppler beaming creates g⁴ ≈ 6× contrast between approaching/receding
+    // Need moderate threshold to catch the boosted side
+    const t = ease(pP);
+    bloomThreshold = 0.70 - t * 0.10;   // slightly lower for disk contrast
+    bloomStrength = 0.6 + t * 0.7;       // builds as disk brightens
+    bloomRadius = 0.45 + t * 0.15;       // moderate — disk is extended
+  }
+  else if(currentPhase === 5){
+    // BZ Jets: P_BZ = (κ/4πc)Φ²_BH Ω²_H
+    // Relativistic synchrotron — very bright along jet axis, narrow
+    // Jet Γ≈100 means emission is beamed into θ ≈ 1/Γ ≈ 0.6°
+    const t = ease(pP);
+    bloomThreshold = 0.55;
+    bloomStrength = 1.2 + t * 0.5;       // jets add significant luminosity
+    bloomRadius = 0.40;                   // tight — jets are narrow
+  }
+  else if(currentPhase === 6){
+    // Consuming planets: accretion flares as matter crosses ISCO
+    // Each planet impact adds a transient luminosity spike
+    // Background disk luminosity continues
+    bloomThreshold = 0.60;
+    bloomStrength = 1.1 + (consumedCount / 8) * 0.3;  // grows with feeding
+    bloomRadius = 0.50;
+  }
+  else if(currentPhase === 7){
+    // Hawking evaporation: T_H ≈ 5.14 nK initially → diverges as M→0
+    // At 10 M☉: peak wavelength λ ≈ ℏc³/(4.97 k_B T_H) ≈ 470 km (!!!)
+    // This is RADIO WAVES bigger than cities — completely invisible
+    // The BH is 5×10⁸ times colder than the CMB
+    //
+    // As M decreases: T_H ∝ 1/M, so:
+    //   - At M = 1 M☉: T_H ≈ 51 nK — still invisible
+    //   - At M = 10⁻⁶ M☉: T_H ≈ 51 K — far infrared, barely visible
+    //   - At M = 10⁻¹⁰ M☉: T_H ≈ 5×10⁵ K — visible! (white-hot)
+    //   - At M = 10⁻¹⁵ M☉: T_H ≈ 5×10¹⁰ K — gamma rays
+    //   - Final moments: T → ∞ as M → 0
+    //
+    // Bloom should be MINIMAL for most of evaporation, then SPIKE
+    // at the very end when T exceeds visible-light thresholds
+    const M0 = PHYS.M_BH + 2;
+    const massFrac = star.mass / M0;
+    const T_relative = 1.0 / Math.max(massFrac, 0.001);
+
+    if(T_relative < 100){
+      // BH is still far colder than CMB — essentially dark
+      // Only the residual accretion disk provides light
+      bloomThreshold = 0.80;
+      bloomStrength = 0.3 + (1.0 - massFrac) * 0.3;
+      bloomRadius = 0.35;
+    } else {
+      // Final runaway — T exceeding visible thresholds
+      const runaway = Math.min(1.0, (T_relative - 100) / 900);
+      bloomThreshold = 0.80 - runaway * 0.45;    // drops to 0.35
+      bloomStrength = 0.6 + runaway * 2.2;         // spikes to 2.8
+      bloomRadius = 0.35 + runaway * 0.45;         // broadens to 0.80
+    }
+  }
+  else if(currentPhase === 8){
+    // BH explosion: final ΔE ≈ M_Planck c² ≈ 2×10⁹ J in ~10⁻²⁷ s
+    // Instantaneous power ≈ 10³⁶ W — comparable to a supernova
+    // Gamma-ray flash: extremely bright, rapid decay
+    const t = pP;
+    if(t < 0.2){
+      // Peak flash
+      bloomThreshold = 0.25;               // everything glows
+      bloomStrength = 2.5 + (0.2-t)/0.2 * 1.0;  // peaks at 3.5
+      bloomRadius = 0.9;                    // maximum spread
+    } else {
+      // Rapid decay — inverse square dilution of expanding photon shell
+      const decay = (t - 0.2) / 0.8;
+      bloomThreshold = 0.25 + decay * 0.50;
+      bloomStrength = 2.5 * Math.pow(1 - decay, 2);  // quadratic falloff
+      bloomRadius = 0.9 - decay * 0.4;
+    }
+  }
+  else if(currentPhase === 9){
+    // Particle remnant: expanding, cooling debris field
+    // No central luminosity source — just thermal afterglow
+    // Fading diffuse bloom
+    const fade = Math.min(1, pP * 2);
+    bloomThreshold = 0.70 + fade * 0.15;   // rises as debris cools
+    bloomStrength = 0.5 * (1 - fade * 0.6); // fades to 0.2
+    bloomRadius = 0.6 - fade * 0.2;         // contracts
+  }
+  else {
+    bloomThreshold = 0.70;
+    bloomStrength = 0.8;
+    bloomRadius = 0.5;
+  }
+
+  // Apply user multiplier (slider acts as overall intensity control)
+  // At 1.0 = physically derived values, 0 = no bloom, 2.0 = 2× physics
+  pipeline.threshold = bloomThreshold;
+  pipeline.strength = bloomStrength * bloomUserMul;
+  pipeline.radius = bloomRadius;
 
   // =========================================================================
   // PHASE LOGIC (corrected order and physics)
@@ -2166,17 +2366,17 @@ function animate(){
     document.getElementById('eq-isco').style.display='block';
     document.getElementById('eq-photon').style.display='block';
     lensingGroup.visible=t>0.3;
-    photonSphereRing.visible=t>0.4;
+    if(photonSphereRing) photonSphereRing.visible=t>0.4;
     if(photonRingRetro) photonRingRetro.visible=t>0.4;
-    ergosphereShell.visible=t>0.5;
-    if(photonSphereRing.material.uniforms) photonSphereRing.material.uniforms.uTime.value=simTime;
+    if(ergosphereShell) ergosphereShell.visible=t>0.5;
+    if(photonSphereRing && photonSphereRing.material.uniforms) photonSphereRing.material.uniforms.uTime.value=simTime;
     if(photonRingRetro && photonRingRetro.material.uniforms) photonRingRetro.material.uniforms.uTime.value=simTime;
-    if(ergosphereShell.material.uniforms){
+    if(ergosphereShell && ergosphereShell.material.uniforms){
       ergosphereShell.material.uniforms.uTime.value=simTime;
       ergosphereShell.material.uniforms.uSpin.value=PHYS.SPIN;
     }
     const omegaH = PHYS.SPIN / (2.0 * (1.0 + Math.sqrt(1.0 - PHYS.SPIN*PHYS.SPIN)));
-    ergosphereShell.rotation.y += dt * omegaH * 3.0;
+    if(ergosphereShell) ergosphereShell.rotation.y += dt * omegaH * 3.0;
     if(pP>=1)advancePhase();
   }
   // FIX: Phase 5 = BZ JETS (now correctly after BH formation)
@@ -2185,42 +2385,48 @@ function animate(){
     star.isBlackHole=true;star.radius=2;star.bhGlow=1;
     star.accretionOpacity=1;star.mass=PHYS.M_BH;star.collapseT=1;
     lensingGroup.visible=true;
-    photonSphereRing.visible=true;
+    if(photonSphereRing) photonSphereRing.visible=true;
     if(photonRingRetro) photonRingRetro.visible=true;
-    ergosphereShell.visible=true;
+    if(ergosphereShell) ergosphereShell.visible=true;
     document.getElementById('eq-bz').style.display='block';
     const jetPower = ease(Math.min(1,t*1.5));
-    jetParticles.visible=true; jetParticles2.visible=true;
-    jetParticles.material.uniforms.uTime.value=simTime;
-    jetParticles.material.uniforms.uAlpha.value=jetPower*0.8;
-    jetParticles.material.uniforms.uJetPower.value=jetPower;
-    jetParticles2.material.uniforms.uTime.value=simTime;
-    jetParticles2.material.uniforms.uAlpha.value=jetPower*0.8;
-    jetParticles2.material.uniforms.uJetPower.value=jetPower;
-    if(photonSphereRing.material.uniforms) photonSphereRing.material.uniforms.uTime.value=simTime;
+    if(jetParticles){
+      jetParticles.visible=true;
+      jetParticles.material.uniforms.uTime.value=simTime;
+      jetParticles.material.uniforms.uAlpha.value=jetPower*0.8;
+      jetParticles.material.uniforms.uJetPower.value=jetPower;
+    }
+    if(jetParticles2){
+      jetParticles2.visible=true;
+      jetParticles2.material.uniforms.uTime.value=simTime;
+      jetParticles2.material.uniforms.uAlpha.value=jetPower*0.8;
+      jetParticles2.material.uniforms.uJetPower.value=jetPower;
+    }
+    if(photonSphereRing && photonSphereRing.material.uniforms) photonSphereRing.material.uniforms.uTime.value=simTime;
     if(photonRingRetro && photonRingRetro.material.uniforms) photonRingRetro.material.uniforms.uTime.value=simTime;
-    if(ergosphereShell.material.uniforms) ergosphereShell.material.uniforms.uTime.value=simTime;
+    if(ergosphereShell && ergosphereShell.material.uniforms) ergosphereShell.material.uniforms.uTime.value=simTime;
     const omegaH = PHYS.SPIN / (2.0 * (1.0 + Math.sqrt(1.0 - PHYS.SPIN*PHYS.SPIN)));
-    ergosphereShell.rotation.y += dt * omegaH * 3.0;
+    if(ergosphereShell) ergosphereShell.rotation.y += dt * omegaH * 3.0;
     if(pP>=1)advancePhase();
   }
   else if(currentPhase===6){
     star.mass=PHYS.M_BH+2;star.isBlackHole=true;star.bhGlow=1;star.accretionOpacity=1;star.radius=2;
-    lensingGroup.visible=true;photonSphereRing.visible=true;
+    lensingGroup.visible=true;
+    if(photonSphereRing) photonSphereRing.visible=true;
     if(photonRingRetro) photonRingRetro.visible=true;
-    ergosphereShell.visible=true;
+    if(ergosphereShell) ergosphereShell.visible=true;
     // Fade jets during consumption
     const jetFade = Math.max(0, 1 - ease(Math.min(1, phaseTime / 5.0)));
-    if(jetParticles.visible){
+    if(jetParticles && jetParticles.visible){
       jetParticles.material.uniforms.uAlpha.value=jetFade*0.3;
-      jetParticles2.material.uniforms.uAlpha.value=jetFade*0.3;
-      if(jetFade<0.01){jetParticles.visible=false;jetParticles2.visible=false;}
+      if(jetParticles2) jetParticles2.material.uniforms.uAlpha.value=jetFade*0.3;
+      if(jetFade<0.01){jetParticles.visible=false; if(jetParticles2) jetParticles2.visible=false;}
     }
-    if(photonSphereRing.material.uniforms) photonSphereRing.material.uniforms.uTime.value=simTime;
+    if(photonSphereRing && photonSphereRing.material.uniforms) photonSphereRing.material.uniforms.uTime.value=simTime;
     if(photonRingRetro && photonRingRetro.material.uniforms) photonRingRetro.material.uniforms.uTime.value=simTime;
-    if(ergosphereShell.material.uniforms) ergosphereShell.material.uniforms.uTime.value=simTime;
+    if(ergosphereShell && ergosphereShell.material.uniforms) ergosphereShell.material.uniforms.uTime.value=simTime;
     const omegaH = PHYS.SPIN / (2.0 * (1.0 + Math.sqrt(1.0 - PHYS.SPIN*PHYS.SPIN)));
-    ergosphereShell.rotation.y += dt * omegaH * 3.0;
+    if(ergosphereShell) ergosphereShell.rotation.y += dt * omegaH * 3.0;
     if(consumedCount >= 8) advancePhase();
   }
   else if(currentPhase===7){
@@ -2228,12 +2434,12 @@ function animate(){
     // BH spins down faster than it loses mass (Page 1976b)
     star.isBlackHole=true;star.bhGlow=1;lensingGroup.visible=true;
     document.getElementById('eq-hawking').style.display='block';
-    photonSphereRing.visible=true;
+    if(photonSphereRing) photonSphereRing.visible=true;
     if(photonRingRetro) photonRingRetro.visible=true;
-    ergosphereShell.visible=true;
-    if(photonSphereRing.material.uniforms) photonSphereRing.material.uniforms.uTime.value=simTime;
+    if(ergosphereShell) ergosphereShell.visible=true;
+    if(photonSphereRing && photonSphereRing.material.uniforms) photonSphereRing.material.uniforms.uTime.value=simTime;
     if(photonRingRetro && photonRingRetro.material.uniforms) photonRingRetro.material.uniforms.uTime.value=simTime;
-    if(ergosphereShell.material.uniforms) ergosphereShell.material.uniforms.uTime.value=simTime;
+    if(ergosphereShell && ergosphereShell.material.uniforms) ergosphereShell.material.uniforms.uTime.value=simTime;
     const M0 = PHYS.M_BH + 2;
     // FIX: Correct mass evolution M(t) = M₀(1 - t/t_evap)^(1/3)
     const cubeRoot = Math.pow(Math.max(0.001, 1.0 - pP), 1.0/3.0);
@@ -2250,9 +2456,9 @@ function animate(){
     hawkingParticles.material.uniforms.uAlpha.value=Math.min(1.0, 0.2 + P_relative * 0.3);
     const massScale = Math.max(0.05, star.mass / M0);
     lensingGroup.scale.set(massScale, massScale, massScale);
-    photonSphereRing.scale.set(massScale, massScale, massScale);
+    if(photonSphereRing) photonSphereRing.scale.set(massScale, massScale, massScale);
     if(photonRingRetro) photonRingRetro.scale.set(massScale, massScale, massScale);
-    ergosphereShell.scale.set(massScale, massScale, massScale);
+    if(ergosphereShell) ergosphereShell.scale.set(massScale, massScale, massScale);
     // Update lensing spin parameter as BH spins down
     if(pipeline.lensingMat) pipeline.lensingMat.uniforms.uSpin.value = currentSpin;
     if(pP > 0.9) flashIntensity = Math.max(flashIntensity, (pP-0.9)/0.1 * P_relative * 0.3);
@@ -2263,9 +2469,9 @@ function animate(){
     if(t<0.15) flashIntensity=Math.max(flashIntensity,ease(t/0.15)*3.0);
     starGroup.visible=t<0.05;lensingGroup.visible=false;
     hawkingParticles.visible=false;
-    photonSphereRing.visible=false;
+    if(photonSphereRing) photonSphereRing.visible=false;
     if(photonRingRetro) photonRingRetro.visible=false;
-    ergosphereShell.visible=false;
+    if(ergosphereShell) ergosphereShell.visible=false;
     explosionParticles.visible=true;
     explosionParticles.material.uniforms.uTime.value=phaseTime;
     explosionParticles.material.uniforms.uAlpha.value=Math.max(0,1-t*0.5);
@@ -2279,9 +2485,9 @@ function animate(){
   // FIX: Phase 9 = PARTICLE REMNANT (was "Planetary Nebula" — impossible from BH evaporation)
   else if(currentPhase===9){
     starGroup.visible=false;lensingGroup.visible=false;
-    photonSphereRing.visible=false;
+    if(photonSphereRing) photonSphereRing.visible=false;
     if(photonRingRetro) photonRingRetro.visible=false;
-    ergosphereShell.visible=false;
+    if(ergosphereShell) ergosphereShell.visible=false;
     explosionParticles.visible=true;
     explosionParticles.material.uniforms.uTime.value=PHASE_DURATIONS[8]+phaseTime*0.3;
     explosionParticles.material.uniforms.uAlpha.value=Math.max(0,0.5-pP*0.6);
@@ -2444,7 +2650,24 @@ function animate(){
   camera.position.z=Math.cos(cameraAngle)*Math.cos(cameraPitch)*cameraDist;
   camera.lookAt(0,-3,0);
   if(scene.userData.sfMat)scene.userData.sfMat.uniforms.uTime.value=simTime;
-  renderer.toneMappingExposure=1.1+flashIntensity*6;flashIntensity=Math.max(0,flashIntensity-dt*0.8);
+  // Phase-aware tone mapping exposure
+  // ACES filmic tone mapping compresses HDR → LDR.
+  // Base exposure should match the phase's characteristic luminosity.
+  let baseExposure;
+  if(currentPhase === 0) baseExposure = 1.1;          // Main sequence: normal
+  else if(currentPhase === 1) baseExposure = 1.0;      // RSG: slightly dimmer surface
+  else if(currentPhase === 2) baseExposure = 0.9;      // SN: lower base, flash adds on top
+  else if(currentPhase === 3) baseExposure = 1.2;      // NS: small but hot
+  else if(currentPhase === 4) baseExposure = 0.95;     // BH: accretion disk has high contrast
+  else if(currentPhase === 5) baseExposure = 0.90;     // Jets: bright synchrotron
+  else if(currentPhase === 6) baseExposure = 0.95;     // Consumption: accretion + flares
+  else if(currentPhase === 7) baseExposure = 1.15;     // Hawking: mostly dark, boost to see disk
+  else if(currentPhase === 8) baseExposure = 0.85;     // Explosion: bright flash, keep controlled
+  else if(currentPhase === 9) baseExposure = 1.3;      // Remnant: dim debris, boost
+  else baseExposure = 1.1;
+
+  renderer.toneMappingExposure = baseExposure + flashIntensity * 5;
+  flashIntensity = Math.max(0, flashIntensity - dt * 0.8);
 
   // =========================================================================
   // HUD updates — corrected physics values
@@ -2520,7 +2743,7 @@ function animate(){
     pipeline.lensingMat.uniforms.uMassParam.value = isBHPhase ? Math.min(1.0, star.bhGlow) : 0.0;
   }
 
-  if(show.bloom && bloomStr > 0){
+  if(show.bloom && bloomUserMul > 0){
     pipeline.render(scene, camera);
   } else {
     renderer.render(scene,camera);
