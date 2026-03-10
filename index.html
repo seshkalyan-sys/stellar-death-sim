@@ -712,71 +712,43 @@ class AdvancedPipeline {
           float rs = uRS * uMassParam;
 
           // ---- Kerr shadow geometry ----
-          // Critical impact parameter b_c ≈ 3√3 M = 2.598 R_s (Schwarzschild)
-          // For Kerr a/M=0.7, shadow is D-shaped:
-          //   prograde side flattened, retrograde side extended
           float shadowRadius = rs * 2.6;
-
-          // D-shape: compute displacement & asymmetry from spin
           float angle = atan(d.y, d.x);
-          // Spin displaces shadow center toward prograde side
-          // and flattens the prograde boundary
           float spinDisplace = uSpin * uSpin * rs * 0.18;
-          vec2 shadowCenter = uBHScreen * aspect + vec2(spinDisplace, 0.0);
           vec2 dFromShadow = d - vec2(spinDisplace / uAspect, 0.0) * aspect;
           float distFromShadow = length(dFromShadow);
-
-          // Kerr shadow boundary: oblate on prograde (right), extended on retrograde (left)
           float cosA = cos(angle);
-          // At a/M=0.7, prograde/retrograde ratio ~1.8:1
           float kerrDeform = 1.0 - uSpin * 0.12 * cosA + uSpin * uSpin * 0.04 * (2.0*cosA*cosA - 1.0);
           float kerrShadowR = shadowRadius * kerrDeform;
 
-          // Inside shadow: black
           if(distFromShadow < kerrShadowR * 0.92){
             gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
             return;
           }
 
-          // ---- Gravitational deflection ----
-          // Correct weak-field: α = 2R_s / b (linear in R_s, not quadratic)
-          // With strong-field logarithmic correction near photon sphere
           float b = max(dist, rs * 0.01);
           float weakDeflection = 2.0 * rs / b;
-
-          // Strong-field: deflection diverges as -ln(b/b_crit - 1) near photon sphere
-          float b_crit = shadowRadius; // photon ring at shadow boundary
+          float b_crit = shadowRadius;
           float strongRatio = b / max(b_crit, 0.001);
           float strongField = 0.0;
           if(strongRatio > 1.0 && strongRatio < 2.0){
             strongField = 0.4 / max(strongRatio - 1.0, 0.02);
           }
-
           float totalDeflection = (weakDeflection + strongField * rs) * 0.5;
-
-          // Smooth falloff outside influence region
           float falloff = smoothstep(kerrShadowR * 0.92, kerrShadowR * 1.5, distFromShadow);
           totalDeflection *= falloff;
 
           vec2 distortion = normalize(d) * totalDeflection / aspect;
           vec2 lensedUV = uv - distortion;
           lensedUV = clamp(lensedUV, 0.001, 0.999);
-
           vec4 col = texture2D(tDiffuse, lensedUV);
 
-          // ---- Photon ring ----
-          // Sits just outside shadow boundary at ~2.6 R_s
           float photonRingDist = distFromShadow / max(kerrShadowR, 0.001);
           float photonRing = smoothstep(0.98, 1.02, photonRingDist) * (1.0 - smoothstep(1.02, 1.08, photonRingDist));
-          // Brighter on retrograde side (photons pile up)
           float retroBoost = 1.0 + uSpin * 0.4 * max(0.0, -cosA);
           col.rgb += vec3(1.0, 0.85, 0.5) * photonRing * uMassParam * 0.8 * retroBoost;
-
-          // Sub-ring: second-order photon ring (n=2 image)
           float subRing = smoothstep(1.08, 1.10, photonRingDist) * (1.0 - smoothstep(1.10, 1.13, photonRingDist));
           col.rgb += vec3(0.6, 0.75, 1.0) * subRing * uMassParam * 0.25;
-
-          // Edge darkening at shadow boundary
           float edgeDark = smoothstep(kerrShadowR * 0.92, kerrShadowR * 1.3, distFromShadow);
           col.rgb *= edgeDark;
 
@@ -812,12 +784,11 @@ class AdvancedPipeline {
       inputTex = lv.hRT.texture;
     }
     this.compositeMat.uniforms.tScene.value = this.sceneRT.texture;
-    for (let i = 0; i < 5; i++) {
-      this.compositeMat.uniforms['tBloom'+i].value = this.levels[i].hRT.texture;
-    }
+    for (let i = 0; i < 5; i++) this.compositeMat.uniforms['tBloom'+i].value = this.levels[i].hRT.texture;
     this.compositeMat.uniforms.uStrength.value = this.strength;
     this.compositeMat.uniforms.uRadius.value = this.radius;
-    if(this.lensingMat && this.lensingMat.uniforms.uMassParam.value > 0.01){
+    const bhActive = this.lensingMat && this.lensingMat.uniforms.uMassParam.value > 0.01;
+    if(bhActive){
       this._renderQuad(this.compositeMat, this.lensingRT);
       this.lensingMat.uniforms.tDiffuse.value = this.lensingRT.texture;
       this._renderQuad(this.lensingMat, null);
@@ -825,6 +796,7 @@ class AdvancedPipeline {
       this._renderQuad(this.compositeMat, null);
     }
   }
+
 }
 
 // ============================================================================
@@ -1658,93 +1630,272 @@ function buildRemnant(){
 
 function buildNeutronStar(){
   neutronStarGroup = new THREE.Group();
+
+  // ── MAGNETIC AXIS PIVOT ───────────────────────────────────────────────────
+  // Reference image: beams and field lines align on a magnetic axis tilted
+  // ~30° from the spin axis. All non-core geometry mounts on this pivot.
+  const magPivot = new THREE.Group();
+  magPivot.rotation.z = 0.52;  // ~30° tilt
+  neutronStarGroup.add(magPivot);
+  neutronStarGroup.userData.magPivot = magPivot;
+
+  // ── CORE SPHERE — bright white, slight blue tint ──────────────────────────
   const nsCore = new THREE.Mesh(
-    new THREE.SphereGeometry(0.5, 48, 48),
+    new THREE.SphereGeometry(1.5, 64, 64),
     new THREE.ShaderMaterial({
-      uniforms:{uTime:{value:0},uTemp:{value:1.0},uPulsePhase:{value:0}},
+      uniforms:{ uTime:{value:0}, uTemp:{value:1.0} },
       vertexShader: NOISE_GLSL + `
         uniform float uTime;
         varying vec3 vN, vP, vW;
         void main(){
-          vN = normalize(normalMatrix * normal);
-          vW = position;
-          vec3 p = position * 0.5;
-          p += normal * snoise(position * 8.0 + uTime * 2.0) * 0.005;
-          vP = (modelViewMatrix * vec4(p,1.0)).xyz;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(p,1.0);
+          vN  = normalize(normalMatrix * normal);
+          vW  = normalize(position);
+          vec3 p = position + normal * snoise(position * 5.0 + uTime * 1.2) * 0.018;
+          vP  = (modelViewMatrix * vec4(p, 1.0)).xyz;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
         }`,
       fragmentShader: NOISE_GLSL + `
-        uniform float uTime, uTemp, uPulsePhase;
+        uniform float uTime, uTemp;
         varying vec3 vN, vP, vW;
         void main(){
-          vec3 viewDir = normalize(-vP);
-          float NdotV = abs(dot(viewDir, vN));
-          float limbDark = 0.4 + 0.6 * pow(NdotV, 0.4);
-          vec3 baseCol = mix(vec3(0.6, 0.7, 1.0), vec3(1.0, 0.95, 0.85), uTemp);
-          float lat = asin(vW.y / length(vW));
-          float hotspot = exp(-pow(abs(lat) - 1.4, 2.0) * 20.0);
-          hotspot += exp(-pow(abs(lat) + 1.4, 2.0) * 20.0);
-          vec3 hotCol = vec3(1.5, 1.3, 1.0);
-          baseCol = mix(baseCol, hotCol, hotspot * 0.6);
-          float detail = fbm(vW * 20.0 + uTime * 0.5) * 0.15;
-          baseCol *= (0.9 + detail);
-          baseCol *= limbDark;
-          gl_FragColor = vec4(baseCol * 2.0, 1.0);
+          vec3 viewDir   = normalize(-vP);
+          float NdotV    = abs(dot(viewDir, vN));
+          float limbDark = 0.4 + 0.6 * pow(NdotV, 0.3);
+          // White-hot core: mix between pure white and very faint blue-white
+          vec3 baseCol   = mix(vec3(0.82, 0.90, 1.0), vec3(1.0, 1.0, 1.0), uTemp);
+          // Polar hotspots (slightly brighter white at magnetic poles)
+          float lat      = asin(clamp(vW.y, -1.0, 1.0));
+          float hotspot  = exp(-pow(lat - 1.4, 2.0) * 14.0)
+                         + exp(-pow(lat + 1.4, 2.0) * 14.0);
+          baseCol = mix(baseCol, vec3(1.0, 1.0, 1.0), hotspot * 0.4);
+          float detail   = fbm(vW * 16.0 + uTime * 0.3) * 0.08;
+          baseCol       *= (0.94 + detail) * limbDark;
+          gl_FragColor   = vec4(baseCol * 2.8, 1.0);
         }`,
     })
   );
   neutronStarGroup.add(nsCore);
   neutronStarGroup.userData.coreMat = nsCore.material;
 
-  // Pulsar beams (magnetic poles, NOT BZ jets)
-  for(let sign = -1; sign <= 1; sign += 2){
-    const beamGeo = new THREE.CylinderGeometry(0.05, 2.5, 25, 32, 1, true);
-    const beamMat = new THREE.ShaderMaterial({
-      uniforms:{uTime:{value:0},uAlpha:{value:0}},
-      vertexShader:`varying vec2 vUv; varying float vY;
-        void main(){ vUv=uv; vY=position.y; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
-      fragmentShader:`uniform float uTime, uAlpha; varying vec2 vUv; varying float vY;
-        void main(){
-          float dist = abs(vY) / 12.5;
-          float edge = 1.0 - abs(vUv.x - 0.5) * 2.0;
-          float beam = pow(edge, 3.0) * (1.0 - dist * 0.7);
-          beam *= 0.7 + 0.3 * sin(uTime * 30.0 + dist * 5.0);
-          vec3 col = mix(vec3(0.3, 0.5, 1.0), vec3(0.8, 0.9, 1.0), edge);
-          gl_FragColor = vec4(col * 2.0, beam * uAlpha * 0.6);
-        }`,
-      transparent:true, side:THREE.DoubleSide, depthWrite:false, blending:THREE.AdditiveBlending
-    });
-    const beam = new THREE.Mesh(beamGeo, beamMat);
-    beam.position.y = sign * 12.5;
-    beam.rotation.z = sign > 0 ? 0.26 : -0.26;
-    neutronStarGroup.add(beam);
-    if(sign > 0) neutronStarGroup.userData.beam1Mat = beamMat;
-    else neutronStarGroup.userData.beam2Mat = beamMat;
-  }
+  // ── SURFACE GLOW — tight white rim around the sphere ─────────────────────
+  const rimMat = new THREE.ShaderMaterial({
+    uniforms:{ uTime:{value:0}, uAlpha:{value:0} },
+    vertexShader:`varying vec3 vP; varying vec3 vN;
+      void main(){
+        vN = normalize(normalMatrix*normal);
+        vP = (modelViewMatrix*vec4(position,1.0)).xyz;
+        gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0);
+      }`,
+    fragmentShader:`uniform float uTime, uAlpha; varying vec3 vP; varying vec3 vN;
+      void main(){
+        float rim   = 1.0 - abs(dot(normalize(-vP), vN));
+        float glow  = pow(rim, 1.4) * 4.5 + pow(max(0.0,rim-0.5),4.0)*20.0;
+        vec3  col   = mix(vec3(0.85,0.92,1.0), vec3(1.0,1.0,1.0), pow(rim,1.5));
+        float flick = 0.93 + 0.07*sin(uTime*11.0+rim*22.0);
+        gl_FragColor= vec4(col*glow*flick, min(1.0,glow*uAlpha*0.9));
+      }`,
+    transparent:true, side:THREE.BackSide, depthWrite:false,
+    blending:THREE.AdditiveBlending
+  });
+  neutronStarGroup.add(new THREE.Mesh(new THREE.SphereGeometry(1.68, 64, 64), rimMat));
+  neutronStarGroup.userData.haloMat = rimMat;
 
-  for(let i = 0; i < 8; i++){
-    const pts = [];
-    const phi = (i / 8) * Math.PI * 2;
-    for(let t = 0; t <= 1; t += 0.02){
-      const theta = (t - 0.5) * Math.PI * 0.9;
-      const r0 = 6;
-      const r = r0 * Math.cos(theta) * Math.cos(theta);
+  // ── DIPOLE MAGNETIC FIELD LINES ───────────────────────────────────────────
+  // Reference image shows closed dipole loops (like a bar magnet), NOT open lines.
+  // Parametric dipole field line: r = r0 * cos²(λ) where λ is magnetic latitude.
+  // Lines distributed evenly in azimuth around the magnetic axis.
+  const N_FIELD_LINES = 16;
+  for(let i = 0; i < N_FIELD_LINES; i++){
+    const phi  = (i / N_FIELD_LINES) * Math.PI * 2;
+    const r0   = 3.8 + (i % 4) * 1.2;
+    const pts  = [];
+    for(let s = 0; s <= 1; s += 0.02){
+      const lam = (s - 0.5) * Math.PI * 0.92;
+      const r   = r0 * Math.cos(lam) * Math.cos(lam);
       pts.push(new THREE.Vector3(
-        r * Math.cos(theta) * Math.cos(phi),
-        r * Math.sin(theta),
-        r * Math.cos(theta) * Math.sin(phi)
+        r * Math.cos(lam) * Math.cos(phi),
+        r * Math.sin(lam),
+        r * Math.cos(lam) * Math.sin(phi)
       ));
     }
-    const curve = new THREE.CatmullRomCurve3(pts);
-    const lineGeo = new THREE.BufferGeometry().setFromPoints(curve.getPoints(50));
-    const lineMat = new THREE.LineBasicMaterial({color:0x4488ff,transparent:true,opacity:0.15,blending:THREE.AdditiveBlending});
-    neutronStarGroup.add(new THREE.Line(lineGeo, lineMat));
+    const curve    = new THREE.CatmullRomCurve3(pts);
+    const isPrimary = i % 4 === 0;
+
+    // Outer soft glow tube — wide, very transparent sky-blue halo
+    const glowMat = new THREE.ShaderMaterial({
+      uniforms:{ uAlpha:{ value: 0.0 }, uTime:{ value: 0.0 } },
+      vertexShader:`varying vec2 vUv;
+        void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+      fragmentShader:`uniform float uAlpha, uTime; varying vec2 vUv;
+        void main(){
+          float d    = abs(vUv.y - 0.5) * 2.0;       // 0=tube axis, 1=tube edge
+          float glow = exp(-d * d * 2.5) * 0.7;       // soft gaussian falloff
+          // Sky-blue: #87CEEB = (0.529, 0.808, 0.922)
+          vec3 col   = vec3(0.53, 0.81, 0.95);
+          float pulse = 0.85 + 0.15 * sin(uTime * 2.5 + vUv.x * 6.28);
+          gl_FragColor = vec4(col * glow * pulse, glow * uAlpha);
+        }`,
+      transparent:true, side:THREE.DoubleSide,
+      depthWrite:false, blending:THREE.AdditiveBlending
+    });
+    const glowMesh = new THREE.Mesh(
+      new THREE.TubeGeometry(curve, 60, isPrimary ? 0.22 : 0.15, 6, false), glowMat
+    );
+    glowMesh.userData.isArc       = true;
+    glowMesh.userData.baseOpacity = isPrimary ? 0.75 : 0.55;
+    glowMesh.userData.isGlow      = true;
+    magPivot.add(glowMesh);
+
+    // Inner bright core tube — thin, fully opaque sky-blue
+    const coreMat = new THREE.ShaderMaterial({
+      uniforms:{ uAlpha:{ value: 0.0 }, uTime:{ value: 0.0 } },
+      vertexShader:`varying vec2 vUv;
+        void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+      fragmentShader:`uniform float uAlpha, uTime; varying vec2 vUv;
+        void main(){
+          float d     = abs(vUv.y - 0.5) * 2.0;
+          float core  = exp(-d * d * 12.0) * 1.8;     // tight bright core
+          // Slightly lighter sky-blue at center
+          vec3  col   = mix(vec3(0.53, 0.81, 0.95), vec3(0.85, 0.96, 1.0), exp(-d*d*6.0));
+          float pulse = 0.9 + 0.1 * sin(uTime * 2.5 + vUv.x * 6.28);
+          gl_FragColor = vec4(col * core * pulse, core * uAlpha);
+        }`,
+      transparent:true, side:THREE.DoubleSide,
+      depthWrite:false, blending:THREE.AdditiveBlending
+    });
+    const coreMesh = new THREE.Mesh(
+      new THREE.TubeGeometry(curve, 60, isPrimary ? 0.055 : 0.036, 6, false), coreMat
+    );
+    coreMesh.userData.isArc       = true;
+    coreMesh.userData.baseOpacity = isPrimary ? 0.95 : 0.80;
+    coreMesh.userData.isGlow      = false;
+    magPivot.add(coreMesh);
   }
+
+  // ── PULSAR BEAMS ──────────────────────────────────────────────────────────
+  // Reference: two wide bright CONES shooting outward from both magnetic poles.
+  // White-purple color, broad base, tight bright core + soft outer collar.
+  // CylinderGeometry(tipRadius=0, baseRadius, height) — tip=top(+Y), base=bottom(-Y).
+  // We place center at ±HALF_LEN so tip is at origin (pole surface).
+  const BEAM_LEN  = 22.0;
+  const HALF      = BEAM_LEN * 0.5;
+
+  for(let sign = -1; sign <= 1; sign += 2){
+
+    // Outer wide glow cone (soft, purple-white)
+    const outerMat = new THREE.ShaderMaterial({
+      uniforms:{ uTime:{value:0}, uAlpha:{value:0} },
+      vertexShader:`varying float vDist; varying float vEdge;
+        void main(){
+          vDist = uv.y;                          // 0=tip, 1=far end
+          vEdge = 1.0 - abs(uv.x - 0.5) * 2.0; // 1=axis, 0=edge
+          gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0);
+        }`,
+      fragmentShader:`uniform float uTime, uAlpha; varying float vDist; varying float vEdge;
+        void main(){
+          float beam = pow(vEdge, 1.8) * exp(-vDist * 1.8);
+          beam      *= 0.6 + 0.4*sin(uTime*18.0 + vDist*5.0);
+          // White-purple matching reference image
+          vec3  col  = mix(vec3(0.85, 0.72, 1.0), vec3(1.0, 1.0, 1.0), pow(vEdge,2.0));
+          gl_FragColor = vec4(col * 2.2, beam * uAlpha * 0.5);
+        }`,
+      transparent:true, side:THREE.DoubleSide, depthWrite:false,
+      blending:THREE.AdditiveBlending
+    });
+    const outerMesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.0, 4.5, BEAM_LEN, 32, 1, true), outerMat
+    );
+    outerMesh.position.y = sign * HALF;
+    if(sign > 0) outerMesh.rotation.z = Math.PI; // flip so tip points toward origin
+    magPivot.add(outerMesh);
+
+    // Inner bright white core cone
+    const innerMat = new THREE.ShaderMaterial({
+      uniforms:{ uTime:{value:0}, uAlpha:{value:0} },
+      vertexShader:`varying float vDist; varying float vEdge;
+        void main(){
+          vDist = uv.y;
+          vEdge = 1.0 - abs(uv.x - 0.5) * 2.0;
+          gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0);
+        }`,
+      fragmentShader:`uniform float uTime, uAlpha; varying float vDist; varying float vEdge;
+        void main(){
+          float beam = pow(vEdge, 4.5) * exp(-vDist * 1.2);
+          beam      *= 0.85 + 0.15*sin(uTime*40.0 + vDist*10.0);
+          // Bright white core
+          vec3  col  = mix(vec3(0.92, 0.88, 1.0), vec3(1.0, 1.0, 1.0), pow(vEdge,2.5));
+          gl_FragColor = vec4(col * 4.0, beam * uAlpha);
+        }`,
+      transparent:true, side:THREE.DoubleSide, depthWrite:false,
+      blending:THREE.AdditiveBlending
+    });
+    const innerMesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.0, 1.1, BEAM_LEN, 16, 1, true), innerMat
+    );
+    innerMesh.position.y = sign * HALF;
+    if(sign > 0) innerMesh.rotation.z = Math.PI;
+    magPivot.add(innerMesh);
+
+    if(sign > 0){
+      neutronStarGroup.userData.beam1Mat      = innerMat;
+      neutronStarGroup.userData.beam1OuterMat = outerMat;
+    } else {
+      neutronStarGroup.userData.beam2Mat      = innerMat;
+      neutronStarGroup.userData.beam2OuterMat = outerMat;
+    }
+  }
+
+  // ── PHOTON RING / LENSING HALO ────────────────────────────────────────────
+  // Thin equatorial torus of bent starlight at the photon sphere
+  const photonRingMat = new THREE.ShaderMaterial({
+    uniforms:{ uTime:{value:0}, uAlpha:{value:0} },
+    vertexShader:`varying vec2 vUv;
+      void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+    fragmentShader:`uniform float uTime, uAlpha; varying vec2 vUv;
+      void main(){
+        float d    = abs(vUv.y - 0.5) * 2.0;
+        float ring = exp(-d*d*10.0) * 3.0;
+        float orb  = 0.7 + 0.3*sin(vUv.x*18.85 + uTime*2.5);
+        vec3  col  = mix(vec3(0.75,0.88,1.0), vec3(1.0,1.0,1.0), exp(-d*d*5.0));
+        gl_FragColor = vec4(col*ring*orb, ring*uAlpha*0.9);
+      }`,
+    transparent:true, side:THREE.DoubleSide, depthWrite:false,
+    blending:THREE.AdditiveBlending
+  });
+  const photonTorus = new THREE.Mesh(
+    new THREE.TorusGeometry(3.0, 0.09, 16, 128), photonRingMat
+  );
+  photonTorus.rotation.x = Math.PI * 0.5;
+  neutronStarGroup.add(photonTorus);
+  neutronStarGroup.userData.photonRingMat      = photonRingMat;
+  neutronStarGroup.userData.photonCaptureTorus = photonTorus;
+
+  // Outer soft Einstein-ring glow
+  const einsteinMat = new THREE.ShaderMaterial({
+    uniforms:{ uTime:{value:0}, uAlpha:{value:0} },
+    vertexShader:`varying vec3 vP; varying vec3 vN;
+      void main(){
+        vN=normalize(normalMatrix*normal);
+        vP=(modelViewMatrix*vec4(position,1.0)).xyz;
+        gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);
+      }`,
+    fragmentShader:`uniform float uTime, uAlpha; varying vec3 vP; varying vec3 vN;
+      void main(){
+        float rim  = 1.0 - abs(dot(normalize(-vP),vN));
+        float halo = pow(rim, 3.0) * 1.5;
+        vec3  col  = mix(vec3(0.75,0.85,1.0), vec3(1.0,1.0,1.0), rim);
+        float breathe = 0.85+0.15*sin(uTime*1.6);
+        gl_FragColor = vec4(col*halo*breathe, halo*uAlpha*0.4);
+      }`,
+    transparent:true, side:THREE.BackSide, depthWrite:false,
+    blending:THREE.AdditiveBlending
+  });
+  neutronStarGroup.add(new THREE.Mesh(new THREE.SphereGeometry(4.2,48,48), einsteinMat));
+  neutronStarGroup.userData.einsteinMat = einsteinMat;
 
   neutronStarGroup.visible = false;
   scene.add(neutronStarGroup);
 }
-
 // =========================================================================
 // FIX #4: JETS — Now BZ jets (appear AFTER BH formation, not during NS phase)
 // Parameters updated to collapsar GRB values: Γ~100, half-angle ~5°
@@ -2009,6 +2160,7 @@ function resetAll(){
   document.getElementById('eq-isco').style.display='none';
   document.getElementById('eq-photon').style.display='none';
   scene.fog=new THREE.FogExp2(0x010104,0.001);scene.background=null;
+  scene.rotation.z = 0;
 }
 
 function skipToPhase(p){resetAll();for(let i=0;i<p;i++)advancePhase();
@@ -2167,9 +2319,9 @@ function animate(){
     // Tiny but incredibly hot — high surface brightness, compact bloom
     // Pulsar beams: coherent synchrotron, tight and intense
     const t = ease(pP);
-    bloomThreshold = 0.80 - t * 0.1;    // high — only beams and hot surface
-    bloomStrength = 1.0 + t * 0.5;       // moderate, grows as beams intensify
-    bloomRadius = 0.35 + t * 0.1;        // tight — small source
+    bloomThreshold = 0.85 - t * 0.05;   // high — only beams and hot surface
+    bloomStrength = 0.5 + t * 0.25;      // subtle — compact source, not full-screen
+    bloomRadius = 0.25 + t * 0.08;       // tight — small source
   }
   else if(currentPhase === 4){
     // Black hole formation: accretion disk spinning up
@@ -2177,17 +2329,17 @@ function animate(){
     // Doppler beaming creates g⁴ ≈ 6× contrast between approaching/receding
     // Need moderate threshold to catch the boosted side
     const t = ease(pP);
-    bloomThreshold = 0.70 - t * 0.10;   // slightly lower for disk contrast
-    bloomStrength = 0.6 + t * 0.7;       // builds as disk brightens
-    bloomRadius = 0.45 + t * 0.15;       // moderate — disk is extended
+    bloomThreshold = 0.72 - t * 0.08;   // slightly lower for disk contrast
+    bloomStrength = 0.4 + t * 0.4;       // restrained — disk glow not full-screen
+    bloomRadius = 0.35 + t * 0.10;       // moderate — disk is extended
   }
   else if(currentPhase === 5){
     // BZ Jets: P_BZ = (κ/4πc)Φ²_BH Ω²_H
     // Relativistic synchrotron — very bright along jet axis, narrow
     // Jet Γ≈100 means emission is beamed into θ ≈ 1/Γ ≈ 0.6°
     const t = ease(pP);
-    bloomThreshold = 0.55;
-    bloomStrength = 1.2 + t * 0.5;       // jets add significant luminosity
+    bloomThreshold = 0.58;
+    bloomStrength = 0.9 + t * 0.4;       // jets add luminosity but controlled
     bloomRadius = 0.40;                   // tight — jets are narrow
   }
   else if(currentPhase === 6){
@@ -2328,39 +2480,97 @@ function animate(){
   }
   else if(currentPhase===3){
     // Neutron Star — pulsar beams (NOT BZ jets)
+    // PHYSICS FIX: NS stays blue-white (T~10^11 K) until TOV collapse.
+    // No color lerp to red — strict blue-white lock throughout.
     const t=ease(pP);
+    // RED SPHERE FIX: hard-reset star collapse state so starGroup (briefly visible)
+    // never shows the Phase 2 red collapse color
+    star.collapseT = 0;
+    star.color = [0.6, 0.75, 1.0];  // blue-white, matching NS temperature
     starGroup.visible=pP<0.05;
     neutronStarGroup.visible=true;
     document.getElementById('eq-ns').style.display='block';
     const nsPeriod = 0.02 + (1-t)*0.5;
-    neutronStarGroup.rotation.y += dt * (2*Math.PI / nsPeriod) * 0.02;
+    // Spin axis = Y, slow visual rotation
+    neutronStarGroup.rotation.y += dt * (2*Math.PI / nsPeriod) * 0.018;
+    // Magnetic axis sweeps faster — the BEAMS rotate around the spin axis
+    const sweepRate = (2*Math.PI / nsPeriod);
+    neutronStarGroup.userData.beamAngle = (neutronStarGroup.userData.beamAngle||0) + dt * sweepRate;
+    // Rotate magPivot around Y (spin axis) — beams sweep like a lighthouse
+    if(neutronStarGroup.userData.magPivot){
+      neutronStarGroup.userData.magPivot.rotation.y = neutronStarGroup.userData.beamAngle;
+    }
+    // Beam brightness: lighthouse pulse as beam sweeps toward viewer
+    const beamPulse = 0.5 + 0.5 * Math.abs(Math.sin(neutronStarGroup.userData.beamAngle));
     if(neutronStarGroup.userData.beam1Mat){
       neutronStarGroup.userData.beam1Mat.uniforms.uTime.value=simTime;
-      neutronStarGroup.userData.beam1Mat.uniforms.uAlpha.value=0.3+t*0.7;
+      neutronStarGroup.userData.beam1Mat.uniforms.uAlpha.value=(0.3+t*0.7)*beamPulse;
       neutronStarGroup.userData.beam2Mat.uniforms.uTime.value=simTime;
-      neutronStarGroup.userData.beam2Mat.uniforms.uAlpha.value=0.3+t*0.7;
+      neutronStarGroup.userData.beam2Mat.uniforms.uAlpha.value=(0.3+t*0.7)*beamPulse;
+    }
+    if(neutronStarGroup.userData.beam1OuterMat){
+      neutronStarGroup.userData.beam1OuterMat.uniforms.uTime.value=simTime;
+      neutronStarGroup.userData.beam1OuterMat.uniforms.uAlpha.value=(0.2+t*0.5)*beamPulse;
+      neutronStarGroup.userData.beam2OuterMat.uniforms.uTime.value=simTime;
+      neutronStarGroup.userData.beam2OuterMat.uniforms.uAlpha.value=(0.2+t*0.5)*beamPulse;
+    }
+    // Gravitational lensing halo ramps up as NS becomes denser
+    if(neutronStarGroup.userData.haloMat){
+      neutronStarGroup.userData.haloMat.uniforms.uTime.value=simTime;
+      neutronStarGroup.userData.haloMat.uniforms.uAlpha.value = 0.4 + t*0.6;
+    }
+    // Photon capture ring — brightens as spin-down concentrates radiation
+    if(neutronStarGroup.userData.photonRingMat){
+      neutronStarGroup.userData.photonRingMat.uniforms.uTime.value=simTime;
+      neutronStarGroup.userData.photonRingMat.uniforms.uAlpha.value = 0.2 + t*0.8;
+    }
+    // Slowly rotate the photon ring torus for visual interest
+    if(neutronStarGroup.userData.photonCaptureTorus){
+      neutronStarGroup.userData.photonCaptureTorus.rotation.z += dt * 0.4;
+    }
+    // Outer Einstein ring — subtle, grows with age
+    if(neutronStarGroup.userData.einsteinMat){
+      neutronStarGroup.userData.einsteinMat.uniforms.uTime.value=simTime;
+      neutronStarGroup.userData.einsteinMat.uniforms.uAlpha.value = 0.15 + t*0.45;
     }
     if(neutronStarGroup.userData.coreMat){
       neutronStarGroup.userData.coreMat.uniforms.uTime.value=simTime;
-      neutronStarGroup.userData.coreMat.uniforms.uTemp.value=1.0-t*0.7;
+      // STRICT BLUE-WHITE LOCK: uTemp stays near 1.0 (blue-white end of NS shader gradient)
+      // Never lerp down to 0 (that would look warm/red via heatmap default)
+      // Real NS: T~10^11 K at birth, cools to ~10^10 K — stays squarely blue-white
+      neutronStarGroup.userData.coreMat.uniforms.uTemp.value = 0.85 + (1.0 - t) * 0.15;
     }
     star.mass=PHYS.NS_MASS + t*0.7;
     star.temp=1e11/1e6*(1-t*0.9);
     star.radius=0.5;
+    // Magnetic field lines: always clearly visible, pulse gently with beam
+    if(neutronStarGroup.userData.magPivot){
+      neutronStarGroup.userData.magPivot.children.forEach(c => {
+        if(c.userData.isArc && c.material && c.material.uniforms) {
+          c.material.uniforms.uTime.value  = simTime;
+          c.material.uniforms.uAlpha.value = c.userData.baseOpacity * (0.75 + 0.25 * beamPulse);
+        }
+      });
+    }
     if(pP>0.85){
+      // TOV limit crossed → gravitational collapse flash
+      // Space-time ripple: scene rotation gives relativistic shockwave feel
       flashIntensity = ease((pP-0.85)/0.15)*1.5;
+      scene.rotation.z += 0.001 * flashIntensity;
       neutronStarGroup.visible = pP < 0.95;
     }
     if(pP>=1)advancePhase();
   }
   // FIX: Phase 4 = BLACK HOLE FORMATION (was Jets — BZ requires BH!)
   else if(currentPhase===4){
+    scene.rotation.z *= 0.85; // damp out the spacetime ripple smoothly
+    star.collapseT = 0; // HARD ZERO — uCollapse must never be >0 in BH phase
     const t=ease(pP);
     neutronStarGroup.visible=false;
     starGroup.visible=true;
     star.isBlackHole=true;star.bhGlow=Math.min(1,t*2);
     star.accretionOpacity=t;
-    star.mass=PHYS.M_BH;star.radius=2;star.collapseT=1;
+    star.mass=PHYS.M_BH;star.radius=2;
     document.getElementById('eq-kerr').style.display='block';
     document.getElementById('eq-horizon').style.display='block';
     document.getElementById('eq-isco').style.display='block';
@@ -2503,8 +2713,10 @@ function animate(){
 
   // Star uniforms
   if(starGroup.visible){
+    // STRICT: collapseT must be 0 in phase 3 & 4 — it drives the red tint in the shader
+    const safeCollapse = (currentPhase === 3 || currentPhase === 4) ? 0 : star.collapseT;
     const cm=starGroup.userData.coreMat.uniforms;cm.uTime.value=simTime;cm.uRadius.value=Math.max(0.1,star.radius);
-    cm.uColor.value.set(...star.color);cm.uCollapse.value=star.collapseT;cm.uBH.value=star.bhGlow;
+    cm.uColor.value.set(...star.color);cm.uCollapse.value=safeCollapse;cm.uBH.value=star.bhGlow;
     const gm=starGroup.userData.glowMat.uniforms;gm.uTime.value=simTime;gm.uScale.value=star.isBlackHole?Math.max(0.2,star.radius*1.8):star.coronaScale;
     gm.uColor.value.set(...(star.isBlackHole?[0.48,0.18,1]:star.coronaColor));gm.uBH.value=star.bhGlow;gm.uOpacity.value=0.6;
     const dm=starGroup.userData.diskMat.uniforms;dm.uTime.value=simTime;dm.uOpacity.value=star.accretionOpacity;
@@ -2635,14 +2847,14 @@ function animate(){
 
   if(lensingGroup.visible&&show.lensing){if(lensingGroup.userData.ringMat)lensingGroup.userData.ringMat.uniforms.uTime.value=simTime;
     lensingGroup.children.forEach(c=>{if(c.userData.rs)c.rotation.z+=dt*c.userData.rs;});
-    const ls=0.8+star.mass*0.05;lensingGroup.scale.set(ls,ls,ls);}else if(!show.lensing)lensingGroup.visible=false;
+    const ls=0.35+star.mass*0.016;lensingGroup.scale.set(ls,ls,ls);}else if(!show.lensing)lensingGroup.visible=false;
 
   if(!isDrag)cameraAngle+=dt*0.06;
   if(userZoomed){
     userZoomTimer-=rawDt;
     if(userZoomTimer<=0) userZoomed=false;
   } else {
-    const tDist=currentPhase>=9?90:70;
+    const tDist=currentPhase>=9?90:(currentPhase>=4&&currentPhase<=8)?110:70;
     cameraDist+=(tDist-cameraDist)*0.005;
   }
   camera.position.x=Math.sin(cameraAngle)*Math.cos(cameraPitch)*cameraDist;
@@ -2729,19 +2941,19 @@ function animate(){
   document.getElementById('tl-fill').style.width=`${Math.min(100, tE / totalDur * 100)}%`;
   document.querySelectorAll('#timeline .mrk').forEach((m,i)=>m.classList.toggle('active',i<=currentPhase));
 
-  // Lensing uniforms
+  // Lensing uniforms — BH pass
   if(pipeline.lensingMat){
     const bhWorld = new THREE.Vector3(0, -3, 0);
     const bhScreen = bhWorld.clone().project(camera);
     const bhUV = new THREE.Vector2(bhScreen.x * 0.5 + 0.5, bhScreen.y * 0.5 + 0.5);
     pipeline.lensingMat.uniforms.uBHScreen.value.copy(bhUV);
     pipeline.lensingMat.uniforms.uAspect.value = camera.aspect;
-    // FIX: Shadow apparent size scaled correctly
-    const apparentRS = Math.min(0.20, 3.5 * star.radius / cameraDist);
+    const apparentRS = Math.min(0.055, 1.1 * star.radius / cameraDist);
     const isBHPhase = star.isBlackHole && currentPhase >= 4 && currentPhase <= 8;
     pipeline.lensingMat.uniforms.uRS.value = apparentRS;
     pipeline.lensingMat.uniforms.uMassParam.value = isBHPhase ? Math.min(1.0, star.bhGlow) : 0.0;
   }
+
 
   if(show.bloom && bloomUserMul > 0){
     pipeline.render(scene, camera);
