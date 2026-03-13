@@ -497,9 +497,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-// ============================================================================
 // SHARED GLSL: 3D Simplex Noise + FBM (injected into all shaders)
-// ============================================================================
 const NOISE_GLSL = `
 vec3 mod289(vec3 x){return x-floor(x*(1.0/289.0))*289.0;}
 vec4 mod289(vec4 x){return x-floor(x*(1.0/289.0))*289.0;}
@@ -569,9 +567,7 @@ float turbulence(vec3 p){
 }
 `;
 
-// ============================================================================
 // BLOOM POST-PROCESSING
-// ============================================================================
 class AdvancedPipeline {
   constructor(renderer, w, h) {
     this.renderer = renderer;
@@ -678,14 +674,12 @@ class AdvancedPipeline {
     }
   }
 
-  // =========================================================================
   // FIX #1: GRAVITATIONAL LENSING — Corrected physics
   // - Shadow radius: ~2.6 R_s (was 0.4 R_s — 6.5× too small)
   // - D-shaped shadow for Kerr a/M=0.7 (was circular)
   // - Deflection: α = 2R_s/b (linear, was quadratic R_s²/dist)
   // - Photon ring at correct location ~2.6 R_s
   // - Strong-field logarithmic divergence near photon sphere
-  // =========================================================================
   initLensing(w, h) {
     const pars = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat };
     this.lensingRT = new THREE.WebGLRenderTarget(w, h, pars);
@@ -871,9 +865,7 @@ const PHYS = {
   T_SI_BURN_FINAL: 3.5e9, // Silicon → Iron
 };
 
-// ============================================================================
 // MAIN SIMULATION
-// ============================================================================
 let scene,camera,renderer,clock,pipeline;
 let starGroup,fabricMesh,lensingGroup,photonSystems=[];
 let simTime=0,speedMul=1,waveFreq=10;
@@ -1088,13 +1080,11 @@ function buildStar(){
     transparent:true,side:THREE.BackSide,depthWrite:false,blending:THREE.AdditiveBlending});
   starGroup.add(new THREE.Mesh(gG,gM));starGroup.userData.glowMat=gM;
 
-  // =========================================================================
   // FIX #2: ACCRETION DISK — Corrected Kerr physics
   // - ISCO at 3.393M (was 3.60M) → sim units ISCO_SIM = 2.36
   // - Doppler beaming: g⁴ bolometric (was D³g²)
   // - Orbital velocity: Kerr formula v = (Ω-ω)√(gφφ)/α (was Schwarzschild)
   // - Kerr orbital frequency: Ω = M^½/(r^(3/2) + aM^½)
-  // =========================================================================
   const ISCO_SIM = 2.36;  // FIX: was 2.5, now maps to 3.393M
   const dG=new THREE.RingGeometry(ISCO_SIM, 16, 256, 12);
   const dM=new THREE.ShaderMaterial({uniforms:{
@@ -1404,8 +1394,34 @@ function buildPlanets(){
       transparent:true,
     });
     grp.add(new THREE.Mesh(new THREE.SphereGeometry(pd.r,32,32),m));
-    if(pd.rings){const rm=new THREE.MeshBasicMaterial({color:new THREE.Color(...pd.color).multiplyScalar(0.7),transparent:true,opacity:0.35,side:THREE.DoubleSide});
-      const ring=new THREE.Mesh(new THREE.RingGeometry(pd.r*1.6,pd.r*2.6,64),rm);ring.rotation.x=Math.PI/2.3;grp.add(ring);}
+    if(pd.rings){
+      if(pd.name==='Saturn'){
+        // Saturn: wide layered disc tilted ~27° — multiple bands visible
+        const rm=new THREE.MeshBasicMaterial({color:new THREE.Color(...pd.color).multiplyScalar(0.7),transparent:true,opacity:0.38,side:THREE.DoubleSide});
+        const ring=new THREE.Mesh(new THREE.RingGeometry(pd.r*1.6,pd.r*2.8,128),rm);
+        ring.rotation.x=Math.PI/2.3;grp.add(ring);
+        // Inner Cassini division gap — slightly darker band
+        const gapMat=new THREE.MeshBasicMaterial({color:new THREE.Color(0.05,0.04,0.03),transparent:true,opacity:0.55,side:THREE.DoubleSide});
+        const gap=new THREE.Mesh(new THREE.RingGeometry(pd.r*2.05,pd.r*2.15,128),gapMat);
+        gap.rotation.x=Math.PI/2.3;grp.add(gap);
+      } else if(pd.name==='Uranus'){
+        // Uranus: 13 narrow, nearly opaque rings nearly edge-on (axial tilt 98°)
+        // Rings are nearly circular, dark (albedo ~0.05), and thin
+        const ringColor=new THREE.Color(0.25,0.28,0.32); // very dark grey-blue
+        const ringTilt=Math.PI/2.05; // nearly edge-on — Uranus axial tilt ~98°
+        // Build the main narrow rings as individual Torus lines
+        const ringRadii=[pd.r*1.65,pd.r*1.78,pd.r*1.90,pd.r*2.02,pd.r*2.15,pd.r*2.30];
+        ringRadii.forEach(r=>{
+          const tm=new THREE.MeshBasicMaterial({color:ringColor,transparent:true,opacity:0.70,side:THREE.DoubleSide});
+          const torus=new THREE.Mesh(new THREE.TorusGeometry(r,0.012,8,128),tm);
+          torus.rotation.x=ringTilt;grp.add(torus);
+        });
+        // Epsilon ring — brightest and widest
+        const em=new THREE.MeshBasicMaterial({color:new THREE.Color(0.30,0.33,0.38),transparent:true,opacity:0.85,side:THREE.DoubleSide});
+        const epsilon=new THREE.Mesh(new THREE.TorusGeometry(pd.r*2.45,0.025,8,128),em);
+        epsilon.rotation.x=ringTilt;grp.add(epsilon);
+      }
+    }
 
     const oP=[];for(let a=0;a<=Math.PI*2;a+=0.015)oP.push(Math.cos(a)*pd.orbit,0,Math.sin(a)*pd.orbit);
     const oG=new THREE.BufferGeometry();oG.setAttribute('position',new THREE.Float32BufferAttribute(oP,3));
@@ -1583,12 +1599,10 @@ function buildDust(){
   `varying vec3 vC;varying float vA;void main(){float d=length(gl_PointCoord-.5)*2.;float a=1.-smoothstep(0.,.85,d);gl_FragColor=vec4(vC,a*vA*0.7);}`);
 }
 
-// =========================================================================
 // FIX #3: Renamed from buildNebula → buildRemnant
 // BH evaporation does NOT produce a planetary nebula.
 // Phase 9 now shows a high-energy particle remnant cloud (gamma-ray flash debris)
 // with appropriate hot, bluish-white coloring instead of nebular ionized gas
-// =========================================================================
 function buildRemnant(){
   // FIX: Colors changed from nebular (cool ionized gas) to hot particle debris
   const data=[
@@ -1631,7 +1645,7 @@ function buildRemnant(){
 function buildNeutronStar(){
   neutronStarGroup = new THREE.Group();
 
-  // ── MAGNETIC AXIS PIVOT ───────────────────────────────────────────────────
+  //  MAGNETIC AXIS PIVOT 
   // Reference image: beams and field lines align on a magnetic axis tilted
   // ~30° from the spin axis. All non-core geometry mounts on this pivot.
   const magPivot = new THREE.Group();
@@ -1639,7 +1653,7 @@ function buildNeutronStar(){
   neutronStarGroup.add(magPivot);
   neutronStarGroup.userData.magPivot = magPivot;
 
-  // ── CORE SPHERE — bright white, slight blue tint ──────────────────────────
+  //CORE SPHERE bright white, slight blue tint
   const nsCore = new THREE.Mesh(
     new THREE.SphereGeometry(1.5, 64, 64),
     new THREE.ShaderMaterial({
@@ -1677,7 +1691,7 @@ function buildNeutronStar(){
   neutronStarGroup.add(nsCore);
   neutronStarGroup.userData.coreMat = nsCore.material;
 
-  // ── SURFACE GLOW — tight white rim around the sphere ─────────────────────
+  // SURFACE GLOW tight white rim around the sphere
   const rimMat = new THREE.ShaderMaterial({
     uniforms:{ uTime:{value:0}, uAlpha:{value:0} },
     vertexShader:`varying vec3 vP; varying vec3 vN;
@@ -1700,7 +1714,7 @@ function buildNeutronStar(){
   neutronStarGroup.add(new THREE.Mesh(new THREE.SphereGeometry(1.68, 64, 64), rimMat));
   neutronStarGroup.userData.haloMat = rimMat;
 
-  // ── DIPOLE MAGNETIC FIELD LINES ───────────────────────────────────────────
+  // DIPOLE MAGNETIC FIELD LINES
   // Reference image shows closed dipole loops (like a bar magnet), NOT open lines.
   // Parametric dipole field line: r = r0 * cos²(λ) where λ is magnetic latitude.
   // Lines distributed evenly in azimuth around the magnetic axis.
@@ -1772,7 +1786,7 @@ function buildNeutronStar(){
     magPivot.add(coreMesh);
   }
 
-  // ── PULSAR BEAMS ──────────────────────────────────────────────────────────
+  // PULSAR BEAMS
   // Reference: two wide bright CONES shooting outward from both magnetic poles.
   // White-purple color, broad base, tight bright core + soft outer collar.
   // CylinderGeometry(tipRadius=0, baseRadius, height) — tip=top(+Y), base=bottom(-Y).
@@ -1845,7 +1859,7 @@ function buildNeutronStar(){
     }
   }
 
-  // ── PHOTON RING / LENSING HALO ────────────────────────────────────────────
+  // PHOTON RING / LENSING HALO
   // Thin equatorial torus of bent starlight at the photon sphere
   const photonRingMat = new THREE.ShaderMaterial({
     uniforms:{ uTime:{value:0}, uAlpha:{value:0} },
@@ -1896,10 +1910,8 @@ function buildNeutronStar(){
   neutronStarGroup.visible = false;
   scene.add(neutronStarGroup);
 }
-// =========================================================================
 // FIX #4: JETS — Now BZ jets (appear AFTER BH formation, not during NS phase)
 // Parameters updated to collapsar GRB values: Γ~100, half-angle ~5°
-// =========================================================================
 function buildJets(){
   const N = 4000;
   [1, -1].forEach((sign, idx) => {
@@ -1973,10 +1985,8 @@ function buildJets(){
   });
 }
 
-// =========================================================================
 // FIX #5: PHOTON SPHERE — Split into prograde and retrograde orbits
 // Prograde: r = 2.013M, Retrograde: r = 3.725M (was single 3.0M)
-// =========================================================================
 function buildPhotonSphere(){
   // Prograde photon orbit at 2.013M → sim scale ~1.4 (using same scale as ISCO)
   const progradeR = 2.013 / 3.393 * 2.36;   // ~1.40 sim units
@@ -2213,9 +2223,6 @@ function skipToPhase(p){resetAll();for(let i=0;i<p;i++)advancePhase();
 
 function tog(k,el){show[k]=!show[k];el.classList.toggle('on');}
 
-// ============================================================================
-// MAIN ANIMATION LOOP
-// ============================================================================
 function animate(){
   requestAnimationFrame(animate);
   speedMul=parseFloat(document.getElementById('sl-speed').value);
@@ -2422,9 +2429,6 @@ function animate(){
   pipeline.strength = bloomStrength * bloomUserMul;
   pipeline.radius = bloomRadius;
 
-  // =========================================================================
-  // PHASE LOGIC (corrected order and physics)
-  // =========================================================================
   if(currentPhase===0){
     star.radius=3+Math.sin(simTime*0.3)*0.1;
     star.color=[1,0.85,0.3];
@@ -2483,12 +2487,22 @@ function animate(){
     // PHYSICS FIX: NS stays blue-white (T~10^11 K) until TOV collapse.
     // No color lerp to red — strict blue-white lock throughout.
     const t=ease(pP);
-    // RED SPHERE FIX: hard-reset star collapse state so starGroup (briefly visible)
-    // never shows the Phase 2 red collapse color
-    star.collapseT = 0;
-    star.color = [0.6, 0.75, 1.0];  // blue-white, matching NS temperature
-    starGroup.visible=pP<0.05;
-    neutronStarGroup.visible=true;
+    // PHYSICS: The NS forms inside the SN ejecta. As ejecta expands and
+    // becomes optically thin (first ~8% of this phase), the hot NS is revealed.
+    // collapseT fades 1→0, ejecta color transitions from red/orange → clear,
+    // then the NS blue-white dominates. This mimics optical depth τ dropping below 1.
+    const ejectaThin = Math.min(1.0, pP / 0.08); // ejecta optical depth clears in 8%
+    star.collapseT = 1.0 - ejectaThin;            // ejecta veil lifts
+    // Ejecta color cools from SN orange → transparent as NS UV dominates
+    star.color = [
+      0.6 + (1.0 - ejectaThin) * 0.4,             // R: 1.0 → 0.6
+      0.75 * ejectaThin + 0.5 * (1.0 - ejectaThin),// G: fades in blue-white
+      1.0 * ejectaThin + 0.3 * (1.0 - ejectaThin)  // B: clears to blue-white
+    ];
+    // starGroup shows only while ejecta is still optically thick
+    starGroup.visible = ejectaThin < 1.0;
+    // NS becomes visible as ejecta thins — but dims the beams while still veiled
+    neutronStarGroup.visible = true;
     document.getElementById('eq-ns').style.display='block';
     const nsPeriod = 0.02 + (1-t)*0.5;
     // Spin axis = Y, slow visual rotation
@@ -2517,12 +2531,12 @@ function animate(){
     // Gravitational lensing halo ramps up as NS becomes denser
     if(neutronStarGroup.userData.haloMat){
       neutronStarGroup.userData.haloMat.uniforms.uTime.value=simTime;
-      neutronStarGroup.userData.haloMat.uniforms.uAlpha.value = 0.4 + t*0.6;
+      neutronStarGroup.userData.haloMat.uniforms.uAlpha.value = (0.4 + t*0.6) * ejectaThin;
     }
     // Photon capture ring — brightens as spin-down concentrates radiation
     if(neutronStarGroup.userData.photonRingMat){
       neutronStarGroup.userData.photonRingMat.uniforms.uTime.value=simTime;
-      neutronStarGroup.userData.photonRingMat.uniforms.uAlpha.value = 0.2 + t*0.8;
+      neutronStarGroup.userData.photonRingMat.uniforms.uAlpha.value = (0.2 + t*0.8) * ejectaThin;
     }
     // Slowly rotate the photon ring torus for visual interest
     if(neutronStarGroup.userData.photonCaptureTorus){
@@ -2531,7 +2545,7 @@ function animate(){
     // Outer Einstein ring — subtle, grows with age
     if(neutronStarGroup.userData.einsteinMat){
       neutronStarGroup.userData.einsteinMat.uniforms.uTime.value=simTime;
-      neutronStarGroup.userData.einsteinMat.uniforms.uAlpha.value = 0.15 + t*0.45;
+      neutronStarGroup.userData.einsteinMat.uniforms.uAlpha.value = (0.15 + t*0.45) * ejectaThin;
     }
     if(neutronStarGroup.userData.coreMat){
       neutronStarGroup.userData.coreMat.uniforms.uTime.value=simTime;
@@ -2593,7 +2607,7 @@ function animate(){
   else if(currentPhase===5){
     const t=ease(pP);
     star.isBlackHole=true;star.radius=2;star.bhGlow=1;
-    star.accretionOpacity=1;star.mass=PHYS.M_BH;star.collapseT=1;
+    star.accretionOpacity=1;star.mass=PHYS.M_BH;star.collapseT=0;
     lensingGroup.visible=true;
     if(photonSphereRing) photonSphereRing.visible=true;
     if(photonRingRetro) photonRingRetro.visible=true;
@@ -2644,6 +2658,10 @@ function animate(){
     // BH spins down faster than it loses mass (Page 1976b)
     star.isBlackHole=true;star.bhGlow=1;lensingGroup.visible=true;
     document.getElementById('eq-hawking').style.display='block';
+    // PHYSICS: Disk drains viscously after planet supply ends (t_visc ~ few orbits)
+    // accretionOpacity decays from full→residual over first 20% of phase
+    const diskDrain = Math.min(1.0, pP / 0.20);
+    star.accretionOpacity = Math.max(0.1, 1.0 - diskDrain * 0.9);
     if(photonSphereRing) photonSphereRing.visible=true;
     if(photonRingRetro) photonRingRetro.visible=true;
     if(ergosphereShell) ergosphereShell.visible=true;
@@ -2655,7 +2673,7 @@ function animate(){
     const cubeRoot = Math.pow(Math.max(0.001, 1.0 - pP), 1.0/3.0);
     star.mass = M0 * cubeRoot;
     star.radius = 2.0 * cubeRoot;
-    star.accretionOpacity = Math.max(0.1, cubeRoot);
+    // accretionOpacity set by disk drain above; cubeRoot used for geometry only
     // FIX: Spin decreases faster than mass (Page 1976b)
     // a/M decreases roughly as (M/M0)^2 for superradiant emission
     const currentSpin = PHYS.SPIN * cubeRoot * cubeRoot;
@@ -2880,10 +2898,8 @@ function animate(){
 
   renderer.toneMappingExposure = baseExposure + flashIntensity * 5;
   flashIntensity = Math.max(0, flashIntensity - dt * 0.8);
-
-  // =========================================================================
-  // HUD updates — corrected physics values
-  // =========================================================================
+  
+  // HUD updates corrected physics values
   // FIX: Corrected phase names
   const names=['Main Sequence','Red Supergiant','Supernova','Neutron Star',
     'Black Hole (Kerr)','Relativistic Jets (BZ)','Consuming Planets',
@@ -2941,7 +2957,7 @@ function animate(){
   document.getElementById('tl-fill').style.width=`${Math.min(100, tE / totalDur * 100)}%`;
   document.querySelectorAll('#timeline .mrk').forEach((m,i)=>m.classList.toggle('active',i<=currentPhase));
 
-  // Lensing uniforms — BH pass
+  // Lensing uniforms BH pass
   if(pipeline.lensingMat){
     const bhWorld = new THREE.Vector3(0, -3, 0);
     const bhScreen = bhWorld.clone().project(camera);
