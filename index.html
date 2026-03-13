@@ -515,8 +515,9 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-
+// ============================================================================
 // SHARED GLSL: 3D Simplex Noise + FBM (injected into all shaders)
+// ============================================================================
 const NOISE_GLSL = `
 vec3 mod289(vec3 x){return x-floor(x*(1.0/289.0))*289.0;}
 vec4 mod289(vec4 x){return x-floor(x*(1.0/289.0))*289.0;}
@@ -586,7 +587,9 @@ float turbulence(vec3 p){
 }
 `;
 
+// ============================================================================
 // BLOOM POST-PROCESSING
+// ============================================================================
 class AdvancedPipeline {
   constructor(renderer, w, h) {
     this.renderer = renderer;
@@ -693,12 +696,14 @@ class AdvancedPipeline {
     }
   }
 
+  // =========================================================================
   // FIX #1: GRAVITATIONAL LENSING — Corrected physics
   // - Shadow radius: ~2.6 R_s (was 0.4 R_s — 6.5× too small)
   // - D-shaped shadow for Kerr a/M=0.7 (was circular)
   // - Deflection: α = 2R_s/b (linear, was quadratic R_s²/dist)
   // - Photon ring at correct location ~2.6 R_s
   // - Strong-field logarithmic divergence near photon sphere
+  // =========================================================================
   initLensing(w, h) {
     const pars = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat };
     this.lensingRT = new THREE.WebGLRenderTarget(w, h, pars);
@@ -884,7 +889,9 @@ const PHYS = {
   T_SI_BURN_FINAL: 3.5e9, // Silicon → Iron
 };
 
+// ============================================================================
 // MAIN SIMULATION
+// ============================================================================
 let scene,camera,renderer,clock,pipeline;
 let starGroup,fabricMesh,lensingGroup,photonSystems=[];
 let simTime=0,speedMul=1,waveFreq=10;
@@ -1742,113 +1749,170 @@ function buildDust(){
 //      a photoionizing stellar remnant. There is none here.
 // =========================================================================
 function buildRemnant(){
+  // Each cloud is a volumetric gaseous shell rendered with layered FBM noise.
+  // We use THREE.BackSide so the camera (inside the expanding shell) sees the
+  // gas volume painted on the inner surface — this is the standard technique
+  // for emission nebulae and gives the correct "glowing cloud" appearance.
+  // Opacity values are strong (0.4–0.9 range in shader) so clouds are visible.
   const shells=[
-    // EQUATORIAL TORUS — flattened, dense, pair-annihilation blue-white
-    // sin²θ geometry: y-scale compressed to 0.35 to create oblate torus shape
-    {r:9,  c:[0.70,0.85,1.00], o:0.18, scaleY:0.35, type:'equatorial'},
-    {r:16, c:[0.55,0.75,1.00], o:0.13, scaleY:0.40, type:'equatorial'},
-
-    // BIPOLAR LOBES — elongated along Y (spin axis), electric blue synchrotron
-    // scaleY > 1 stretches sphere into prolate ellipsoid along spin axis
-    {r:11, c:[0.30,0.55,1.00], o:0.14, scaleY:2.80, type:'bipolar'},
-    {r:18, c:[0.20,0.45,0.95], o:0.09, scaleY:3.20, type:'bipolar'},
-
-    // RAYLEIGH-TAYLOR SHELLS — roughly spherical but heavily fragmented by noise
-    // These are the "bubble walls" where R-T fingers have swept up ISM
-    {r:13, c:[0.50,0.80,0.95], o:0.10, scaleY:1.00, type:'rt_shell'},
-    {r:22, c:[0.45,0.65,1.00], o:0.07, scaleY:1.10, type:'rt_shell'},
-    {r:30, c:[0.35,0.50,0.90], o:0.05, scaleY:1.05, type:'rt_shell'},
-
-    // OUTER HALO — thermal photon bath (T~10^6 K), pale violet inverse Compton
-    {r:38, c:[0.65,0.55,1.00], o:0.04, scaleY:0.90, type:'halo'},
+    // EQUATORIAL TORUS — oblate, dense pair-plasma, blue-white
+    {r:10, c:[0.60,0.82,1.00], o:0.55, scaleY:0.30, type:'equatorial'},
+    {r:18, c:[0.45,0.70,1.00], o:0.40, scaleY:0.35, type:'equatorial'},
+    // BIPOLAR LOBES — prolate along spin axis, electric blue synchrotron
+    {r:12, c:[0.25,0.50,1.00], o:0.50, scaleY:2.60, type:'bipolar'},
+    {r:20, c:[0.15,0.40,0.95], o:0.35, scaleY:3.00, type:'bipolar'},
+    // RAYLEIGH-TAYLOR SHELLS — broken, filamentary, cyan-blue
+    {r:15, c:[0.40,0.78,0.95], o:0.45, scaleY:1.00, type:'rt_shell'},
+    {r:24, c:[0.35,0.62,1.00], o:0.32, scaleY:1.08, type:'rt_shell'},
+    {r:32, c:[0.28,0.48,0.90], o:0.22, scaleY:1.04, type:'rt_shell'},
+    // OUTER HALO — vast, faint, pale violet inverse Compton glow
+    {r:42, c:[0.60,0.50,1.00], o:0.18, scaleY:0.88, type:'halo'},
   ];
 
-  shells.forEach((sd,idx)=>{
+  const NEBULA_FRAG = NOISE_GLSL + `
+    uniform float uTime, uAlpha, uBaseOp, uType;
+    uniform vec3  uColor;
+    varying vec3  vN, vP, vW;
+
+    void main(){
+      vec3 dir = normalize(vW);
+
+      // ── Polar geometry masks ──────────────────────────────────────────────
+      float cosTheta  = dir.y;
+      float sinTheta2 = 1.0 - cosTheta*cosTheta;
+
+      float geomMask;
+      if(uType < 0.5){
+        // Equatorial torus: emission concentrated in equatorial band
+        // sin^6 θ gives a sharp bright ring around the equator
+        geomMask = pow(sinTheta2, 2.5);
+
+      } else if(uType < 1.5){
+        // Bipolar lobes: bright at poles, dark at equator
+        float sigma2 = 0.22;
+        geomMask = exp(-sinTheta2 / (2.0 * sigma2));
+
+      } else if(uType < 2.5){
+        // Rayleigh-Taylor shell: isotropic but heavily carved by noise
+        // Large bubbles (fbm), medium fingers (snoise), fine clumps (turbulence)
+        float bubble  = fbm(dir * 3.5 + uTime * 0.04);
+        float finger  = pow(abs(snoise(dir * 7.0 + uTime * 0.06)), 1.8);
+        float clump   = turbulence(dir * 14.0 + uTime * 0.08) * 0.5;
+        geomMask = clamp(bubble * 0.55 + finger * 0.70 + clump * 0.35, 0.0, 1.0);
+
+      } else {
+        // Outer halo: smooth glow, slightly equator-bright
+        geomMask = 0.55 + 0.45 * sinTheta2;
+      }
+
+      // ── Volumetric cloud density ──────────────────────────────────────────
+      // Three octaves of noise at different scales give the wispy, knotted
+      // texture of real emission nebulae (Crab, Helix, Ring)
+      float large  = fbm(dir * 2.0  + uTime * 0.025);           // large pillars
+      float medium = fbm(dir * 5.5  + uTime * 0.045 + 7.3);     // medium wisps
+      float fine   = turbulence(dir * 12.0 + uTime * 0.07 + 3.1); // fine filaments
+
+      // Combine: large structure dominates, medium and fine add texture
+      float cloud = large * 0.50 + medium * 0.32 + fine * 0.28;
+      cloud = clamp(cloud + 0.25, 0.0, 1.0); // lift floor so cloud is never fully black
+
+      // ── Color variation across cloud ──────────────────────────────────────
+      // Temperature fluctuations in the plasma shift the local emission colour
+      vec3 warm = uColor + vec3(0.10, 0.05, -0.05); // slightly hotter pocket
+      vec3 cool = uColor + vec3(-0.08, 0.02, 0.12); // slightly cooler pocket
+      float tempVar = snoise(dir * 4.0 + uTime * 0.03);
+      vec3 col = mix(cool, warm, tempVar * 0.5 + 0.5);
+
+      // Limb brightening: gas column is thicker at the edge of the shell
+      float rim       = 1.0 - abs(dot(normalize(-vP), vN));
+      float limb      = pow(clamp(rim, 0.0, 1.0), 1.2);
+
+      // Slow internal motion — gas sloshes inside the shell
+      float drift = 0.88 + 0.12 * sin(uTime * 0.5 + length(vW) * 0.2);
+      col *= drift;
+
+      // ── Final alpha ───────────────────────────────────────────────────────
+      // cloud × geomMask gives the clumpy, structured nebula density.
+      // limb brightening boosts the edges. uBaseOp scales the whole shell.
+      float a = cloud * geomMask * (0.5 + 0.5 * limb) * uBaseOp * uAlpha;
+      a = clamp(a, 0.0, 0.88);
+
+      gl_FragColor = vec4(col * 1.8, a);
+    }
+  `;
+
+  shells.forEach((sd, idx)=>{
     const isEquatorial = sd.type==='equatorial';
     const isBipolar    = sd.type==='bipolar';
     const isRT         = sd.type==='rt_shell';
 
-    const mat=new THREE.ShaderMaterial({
+    const mat = new THREE.ShaderMaterial({
       uniforms:{
-        uTime:{value:0},
-        uColor:{value:new THREE.Vector3(...sd.c)},
-        uAlpha:{value:0},
-        uBaseOp:{value:sd.o},
-        uType:{value: isEquatorial?0.0 : isBipolar?1.0 : isRT?2.0 : 3.0},
+        uTime:   {value:0},
+        uColor:  {value: new THREE.Vector3(...sd.c)},
+        uAlpha:  {value:0},
+        uBaseOp: {value: sd.o},
+        uType:   {value: isEquatorial?0.0 : isBipolar?1.0 : isRT?2.0 : 3.0},
       },
-      vertexShader:`
-        varying vec3 vN, vP, vW;
-        void main(){
-          vN = normalize(normalMatrix * normal);
-          vW = position;
-          vP = (modelViewMatrix * vec4(position, 1.0)).xyz;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }`,
-      fragmentShader: NOISE_GLSL + `
-        uniform float uTime, uAlpha, uBaseOp, uType;
-        uniform vec3 uColor;
+      vertexShader: NOISE_GLSL + `
+        uniform float uType;
         varying vec3 vN, vP, vW;
 
         void main(){
-          // Rim lighting — edge of shell glows brightest (limb brightening)
-          float rim = 1.0 - abs(dot(normalize(-vP), vN));
-          float limbBright = pow(rim, 1.8);
+          vec3 dir = normalize(position);
 
-          // Normalised polar angle: cosTheta=0 at equator, ±1 at poles
-          float cosTheta = normalize(vW).y;
-          float sinTheta2 = 1.0 - cosTheta*cosTheta; // sin²θ
+          // ── Vertex displacement — breaks the perfect circular silhouette ──
+          // Three octaves at different scales, each shell type gets different
+          // displacement amplitude so they look distinct from each other.
 
-          float geomMask;
+          // Large-scale lobes: 20–35% radius variation (pillar-scale structure)
+          float disp1 = snoise(dir * 1.8 + 7.3)  * 0.28;
+          // Medium-scale clumps: 10–18% radius variation (knot-scale)
+          float disp2 = snoise(dir * 3.9 + 2.1)  * 0.14;
+          // Fine-scale filaments: 4–8% radius variation (filament-scale)
+          float disp3 = snoise(dir * 8.5 + 11.7) * 0.06;
 
+          float disp = disp1 + disp2 + disp3;
+
+          // Equatorial torus (uType==0): stronger clumping in equatorial band
+          // so the ring breaks into discrete bright knots (like Helix Nebula ring)
           if(uType < 0.5){
-            // EQUATORIAL TORUS: density ∝ sin²θ — peaks at equator
-            // Sharpen with power to get a thinner torus ring
-            geomMask = pow(sinTheta2, 3.0);
-          } else if(uType < 1.5){
-            // BIPOLAR LOBES: density ∝ exp(-sin²θ / 2σ²), σ~0.18 rad (~10°)
-            // Only bright near poles (|cosTheta| → 1)
-            float sigma2 = 0.18;
-            geomMask = exp(-sinTheta2 / (2.0*sigma2));
-          } else if(uType < 2.5){
-            // RAYLEIGH-TAYLOR SHELL: roughly isotropic but broken by instability
-            // fingers. Use fbm to carve holes — R-T produces ~30% void fraction
-            float shell = fbm(vW * 0.10 + uTime * 0.03);       // large-scale bubbles
-            float fingers = pow(abs(snoise(vW * 0.22 + uTime * 0.04)), 2.2); // R-T fingers
-            float smallScale = turbulence(vW * 0.55 + uTime * 0.06); // small clumps
-            // Combine: shell structure + filaments + fine detail
-            geomMask = clamp(shell*0.5 + fingers*0.6 + smallScale*0.3, 0.0, 1.0);
-          } else {
-            // OUTER HALO: smooth, fading with slight anisotropy from spin
-            geomMask = 0.6 + 0.4*sinTheta2; // slightly brighter at equator
+            float eqBand = 1.0 - abs(dir.y); // peaks at equator
+            disp *= (0.6 + eqBand * 0.9);    // more displaced near equator
           }
 
-          // Color variation: slight spectral shift across shell surface
-          // Models local temperature fluctuations in the plasma
-          vec3 colorShift = vec3(
-            snoise(vW * 0.06 + 7.0)  * 0.12,
-            snoise(vW * 0.06 + 14.0) * 0.10,
-            snoise(vW * 0.06 + 21.0) * 0.08
-          );
-          vec3 col = uColor + colorShift;
+          // Bipolar lobes (uType==1): displacement elongated along poles
+          // so lobes develop bubble-like tips rather than smooth ellipsoid ends
+          if(uType > 0.5 && uType < 1.5){
+            float poleStr = abs(dir.y);
+            disp *= (0.5 + poleStr * 1.2);
+          }
 
-          // Pair-annihilation brightening: hotter regions pulse slightly
-          float pulse = 0.85 + 0.15 * sin(uTime * 0.8 + length(vW) * 0.3);
-          col *= pulse;
+          // R-T shells (uType==2): maximum displacement — most broken/filamentary
+          if(uType > 1.5 && uType < 2.5){
+            disp *= 1.5;
+          }
 
-          float alpha = limbBright * geomMask * uBaseOp * uAlpha;
-          alpha = clamp(alpha, 0.0, 0.40);
+          // Displace vertex along its normal direction
+          vec3 displaced = position + normal * disp * length(position) * 0.18;
 
-          gl_FragColor = vec4(col * 1.6, alpha);
+          vN = normalize(normalMatrix * normalize(displaced));
+          vW = displaced;
+          vP = (modelViewMatrix * vec4(displaced, 1.0)).xyz;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(displaced, 1.0);
         }`,
-      transparent:true, side:THREE.DoubleSide, depthWrite:false,
-      blending:THREE.AdditiveBlending
+      fragmentShader: NEBULA_FRAG,
+      transparent: true,
+      // BackSide: camera is inside the expanding shell, sees the gas on the inner wall
+      side: THREE.BackSide,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
     });
 
-    // Apply geometric scaling — equatorial torus is oblate, bipolar lobes are prolate
-    const mesh = new THREE.Mesh(new THREE.SphereGeometry(sd.r, 64, 64), mat);
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(sd.r, 80, 80), mat);
     mesh.scale.set(1.0, sd.scaleY, 1.0);
-    // Align spin axis with Y — slight tilt for realism (BH spin axis rarely perpendicular)
-    mesh.rotation.set(0.15 + idx*0.05, Math.random()*Math.PI*2, 0.08);
+    // Slight tilt — BH spin axis is rarely perfectly aligned with our view
+    mesh.rotation.set(0.12 + idx*0.04, Math.random()*Math.PI*2, 0.06);
     mesh.visible = false;
     scene.add(mesh);
     nebulaShells.push({mesh, mat, baseR:sd.r});
@@ -1858,7 +1922,7 @@ function buildRemnant(){
 function buildNeutronStar(){
   neutronStarGroup = new THREE.Group();
 
-  // MAGNETIC AXIS PIVOT 
+  // ── MAGNETIC AXIS PIVOT ───────────────────────────────────────────────────
   // Reference image: beams and field lines align on a magnetic axis tilted
   // ~30° from the spin axis. All non-core geometry mounts on this pivot.
   const magPivot = new THREE.Group();
@@ -1866,7 +1930,7 @@ function buildNeutronStar(){
   neutronStarGroup.add(magPivot);
   neutronStarGroup.userData.magPivot = magPivot;
 
-  //  CORE SPHERE — bright white, slight blue tint 
+  // ── CORE SPHERE — bright white, slight blue tint ──────────────────────────
   const nsCore = new THREE.Mesh(
     new THREE.SphereGeometry(1.5, 64, 64),
     new THREE.ShaderMaterial({
@@ -1904,7 +1968,7 @@ function buildNeutronStar(){
   neutronStarGroup.add(nsCore);
   neutronStarGroup.userData.coreMat = nsCore.material;
 
-  // SURFACE GLOW — tight white rim around the sphere 
+  // ── SURFACE GLOW — tight white rim around the sphere ─────────────────────
   const rimMat = new THREE.ShaderMaterial({
     uniforms:{ uTime:{value:0}, uAlpha:{value:0} },
     vertexShader:`varying vec3 vP; varying vec3 vN;
@@ -1927,7 +1991,7 @@ function buildNeutronStar(){
   neutronStarGroup.add(new THREE.Mesh(new THREE.SphereGeometry(1.68, 64, 64), rimMat));
   neutronStarGroup.userData.haloMat = rimMat;
 
-  //  DIPOLE MAGNETIC FIELD LINES 
+  // ── DIPOLE MAGNETIC FIELD LINES ───────────────────────────────────────────
   // Reference image shows closed dipole loops (like a bar magnet), NOT open lines.
   // Parametric dipole field line: r = r0 * cos²(λ) where λ is magnetic latitude.
   // Lines distributed evenly in azimuth around the magnetic axis.
@@ -2072,7 +2136,7 @@ function buildNeutronStar(){
     }
   }
 
-  // PHOTON RING / LENSING HALO 
+  // ── PHOTON RING / LENSING HALO ────────────────────────────────────────────
   // Thin equatorial torus of bent starlight at the photon sphere
   const photonRingMat = new THREE.ShaderMaterial({
     uniforms:{ uTime:{value:0}, uAlpha:{value:0} },
@@ -2123,8 +2187,10 @@ function buildNeutronStar(){
   neutronStarGroup.visible = false;
   scene.add(neutronStarGroup);
 }
+// =========================================================================
 // FIX #4: JETS — Now BZ jets (appear AFTER BH formation, not during NS phase)
 // Parameters updated to collapsar GRB values: Γ~100, half-angle ~5°
+// =========================================================================
 function buildJets(){
   const N = 4000;
   [1, -1].forEach((sign, idx) => {
@@ -2198,8 +2264,10 @@ function buildJets(){
   });
 }
 
+// =========================================================================
 // FIX #5: PHOTON SPHERE — Split into prograde and retrograde orbits
 // Prograde: r = 2.013M, Retrograde: r = 3.725M (was single 3.0M)
+// =========================================================================
 function buildPhotonSphere(){
   // Prograde photon orbit at 2.013M → sim scale ~1.4 (using same scale as ISCO)
   const progradeR = 2.013 / 3.393 * 2.36;   // ~1.40 sim units
@@ -2436,7 +2504,9 @@ function skipToPhase(p){resetAll();for(let i=0;i<p;i++)advancePhase();
 
 function tog(k,el){show[k]=!show[k];el.classList.toggle('on');}
 
+// ============================================================================
 // MAIN ANIMATION LOOP
+// ============================================================================
 function animate(){
   requestAnimationFrame(animate);
   speedMul=parseFloat(document.getElementById('sl-speed').value);
@@ -2643,7 +2713,9 @@ function animate(){
   pipeline.strength = bloomStrength * bloomUserMul;
   pipeline.radius = bloomRadius;
 
+  // =========================================================================
   // PHASE LOGIC (corrected order and physics)
+  // =========================================================================
   if(currentPhase===0){
     star.radius=3+Math.sin(simTime*0.3)*0.1;
     star.color=[1,0.85,0.3];
@@ -2983,29 +3055,23 @@ function animate(){
     // Each shell type has distinct expansion velocity based on its driving mechanism
     if(pP > 0.05){
       const nt = (pP-0.05)/0.95;
+      // scaleY ratios matching buildRemnant: equatorial oblate, bipolar prolate
+      const scaleYRatios    = [0.30, 0.35, 2.60, 3.00, 1.00, 1.08, 1.04, 0.88];
+      const expansionRates  = [0.50, 0.45, 1.30, 1.20, 0.85, 0.80, 0.75, 1.60];
       nebulaShells.forEach((ns, i)=>{
         ns.mesh.visible = true;
-        // Staggered appearance: inner shells first, outer halo last
-        const appearT = Math.max(0, Math.min(1, (nt - i*0.06)*2.5));
+        // Fade in fully sized — shells are large gaseous clouds, not growing dots
+        const appearT = Math.max(0, Math.min(1, (nt - i*0.07)*3.0));
         ns.mat.uniforms.uAlpha.value = appearT;
         ns.mat.uniforms.uTime.value  = simTime;
-
-        // Differential expansion:
-        // Equatorial torus (i=0,1): slower radial, maintained oblate shape
-        // Bipolar lobes (i=2,3): fast axial expansion along spin axis
-        // R-T shells (i=4,5,6): intermediate, slightly irregular
-        // Outer halo (i=7): fastest — photon gas at near-c
-        const expansionRates = [0.6, 0.55, 1.4, 1.3, 0.9, 0.85, 0.80, 1.8];
+        // Expand outward from their built radius
         const rate = expansionRates[Math.min(i, expansionRates.length-1)];
-        const sc = 0.15 + appearT*0.7 + nt*rate*0.5;
-
-        // Preserve the geometric scaling (equatorial = oblate, bipolar = prolate)
-        // by only scaling uniformly — the mesh.scale.y was set in buildRemnant
-        const baseScaleY = ns.mesh.scale.y > 1.5 ? ns.mesh.scale.y/Math.max(0.01,ns.mesh.scale.x) :
-                           ns.mesh.scale.y < 0.5 ? ns.mesh.scale.y/Math.max(0.01,ns.mesh.scale.x) : 1.0;
-        ns.mesh.scale.set(sc, sc * (ns.mat.uniforms.uType ? 1.0 : 1.0), sc);
-        // Slow precession: spin axis precesses due to radiation pressure asymmetry
-        ns.mesh.rotation.y += dt * 0.015 * (i%2===0 ? 1 : -1);
+        const sc   = 1.0 + nt * rate * 0.8;
+        // Restore oblate/prolate shape every frame
+        const sy = scaleYRatios[Math.min(i, scaleYRatios.length-1)];
+        ns.mesh.scale.set(sc, sc * sy, sc);
+        // Slow precession
+        ns.mesh.rotation.y += dt * 0.012 * (i%2===0 ? 1 : -1);
       });
     }
 
@@ -3187,7 +3253,10 @@ function animate(){
   renderer.toneMappingExposure = baseExposure + flashIntensity * 5;
   flashIntensity = Math.max(0, flashIntensity - dt * 0.8);
 
-  // HUD updates — corrected physics value
+  // =========================================================================
+  // HUD updates — corrected physics values
+  // =========================================================================
+  // FIX: Corrected phase names
   const names=['Main Sequence','Red Supergiant','Supernova','Neutron Star',
     'Black Hole (Kerr)','Relativistic Jets (BZ)','Consuming Planets',
     'Hawking Evaporation','BH Explosion','Particle Remnant'];
