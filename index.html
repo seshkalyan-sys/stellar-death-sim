@@ -4,6 +4,24 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Stellar Death — Spacetime Relativity Simulation</title>
+
+<!-- Open Graph — LinkedIn / Facebook rich preview -->
+<meta property="og:type"        content="website">
+<meta property="og:url"         content="https://seshkalyan-sys.github.io/stellar-death-sim/">
+<meta property="og:title"       content="Stellar Death — Spacetime Relativity Simulation">
+<meta property="og:description" content="Watch a star collapse, explode, become a black hole, and vanish into nothing. A relativistic stellar death simulation grounded entirely in real physics and mathematics.">
+<meta property="og:image"       content="https://seshkalyan-sys.github.io/stellar-death-sim/preview.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+
+<!-- Twitter Card (also read by LinkedIn as fallback) -->
+<meta name="twitter:card"        content="summary_large_image">
+<meta name="twitter:title"       content="Stellar Death — Spacetime Relativity Simulation">
+<meta name="twitter:description" content="Watch a star collapse, explode, become a black hole, and vanish into nothing. Built with physics, imagination, and a conversation with Claude.">
+<meta name="twitter:image"       content="https://seshkalyan-sys.github.io/stellar-death-sim/preview.png">
+
+<!-- General SEO -->
+<meta name="description" content="Watch a star collapse, explode, become a black hole, and vanish into nothing. A relativistic stellar death simulation grounded entirely in real physics and mathematics.">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;600;700&family=Bebas+Neue&family=JetBrains+Mono:wght@300;400&display=swap');
 
@@ -497,9 +515,8 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-// ============================================================================
+
 // SHARED GLSL: 3D Simplex Noise + FBM (injected into all shaders)
-// ============================================================================
 const NOISE_GLSL = `
 vec3 mod289(vec3 x){return x-floor(x*(1.0/289.0))*289.0;}
 vec4 mod289(vec4 x){return x-floor(x*(1.0/289.0))*289.0;}
@@ -569,9 +586,7 @@ float turbulence(vec3 p){
 }
 `;
 
-// ============================================================================
 // BLOOM POST-PROCESSING
-// ============================================================================
 class AdvancedPipeline {
   constructor(renderer, w, h) {
     this.renderer = renderer;
@@ -678,14 +693,12 @@ class AdvancedPipeline {
     }
   }
 
-  // =========================================================================
   // FIX #1: GRAVITATIONAL LENSING — Corrected physics
   // - Shadow radius: ~2.6 R_s (was 0.4 R_s — 6.5× too small)
   // - D-shaped shadow for Kerr a/M=0.7 (was circular)
   // - Deflection: α = 2R_s/b (linear, was quadratic R_s²/dist)
   // - Photon ring at correct location ~2.6 R_s
   // - Strong-field logarithmic divergence near photon sphere
-  // =========================================================================
   initLensing(w, h) {
     const pars = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat };
     this.lensingRT = new THREE.WebGLRenderTarget(w, h, pars);
@@ -871,9 +884,7 @@ const PHYS = {
   T_SI_BURN_FINAL: 3.5e9, // Silicon → Iron
 };
 
-// ============================================================================
 // MAIN SIMULATION
-// ============================================================================
 let scene,camera,renderer,clock,pipeline;
 let starGroup,fabricMesh,lensingGroup,photonSystems=[];
 let simTime=0,speedMul=1,waveFreq=10;
@@ -1847,7 +1858,7 @@ function buildRemnant(){
 function buildNeutronStar(){
   neutronStarGroup = new THREE.Group();
 
-  // ── MAGNETIC AXIS PIVOT ───────────────────────────────────────────────────
+  // MAGNETIC AXIS PIVOT 
   // Reference image: beams and field lines align on a magnetic axis tilted
   // ~30° from the spin axis. All non-core geometry mounts on this pivot.
   const magPivot = new THREE.Group();
@@ -1855,7 +1866,7 @@ function buildNeutronStar(){
   neutronStarGroup.add(magPivot);
   neutronStarGroup.userData.magPivot = magPivot;
 
-  // ── CORE SPHERE — bright white, slight blue tint ──────────────────────────
+  //  CORE SPHERE — bright white, slight blue tint 
   const nsCore = new THREE.Mesh(
     new THREE.SphereGeometry(1.5, 64, 64),
     new THREE.ShaderMaterial({
@@ -1893,7 +1904,7 @@ function buildNeutronStar(){
   neutronStarGroup.add(nsCore);
   neutronStarGroup.userData.coreMat = nsCore.material;
 
-  // ── SURFACE GLOW — tight white rim around the sphere ─────────────────────
+  // SURFACE GLOW — tight white rim around the sphere 
   const rimMat = new THREE.ShaderMaterial({
     uniforms:{ uTime:{value:0}, uAlpha:{value:0} },
     vertexShader:`varying vec3 vP; varying vec3 vN;
@@ -1916,7 +1927,7 @@ function buildNeutronStar(){
   neutronStarGroup.add(new THREE.Mesh(new THREE.SphereGeometry(1.68, 64, 64), rimMat));
   neutronStarGroup.userData.haloMat = rimMat;
 
-  // ── DIPOLE MAGNETIC FIELD LINES ───────────────────────────────────────────
+  //  DIPOLE MAGNETIC FIELD LINES 
   // Reference image shows closed dipole loops (like a bar magnet), NOT open lines.
   // Parametric dipole field line: r = r0 * cos²(λ) where λ is magnetic latitude.
   // Lines distributed evenly in azimuth around the magnetic axis.
@@ -2061,7 +2072,7 @@ function buildNeutronStar(){
     }
   }
 
-  // ── PHOTON RING / LENSING HALO ────────────────────────────────────────────
+  // PHOTON RING / LENSING HALO 
   // Thin equatorial torus of bent starlight at the photon sphere
   const photonRingMat = new THREE.ShaderMaterial({
     uniforms:{ uTime:{value:0}, uAlpha:{value:0} },
@@ -2112,10 +2123,8 @@ function buildNeutronStar(){
   neutronStarGroup.visible = false;
   scene.add(neutronStarGroup);
 }
-// =========================================================================
 // FIX #4: JETS — Now BZ jets (appear AFTER BH formation, not during NS phase)
 // Parameters updated to collapsar GRB values: Γ~100, half-angle ~5°
-// =========================================================================
 function buildJets(){
   const N = 4000;
   [1, -1].forEach((sign, idx) => {
@@ -2189,10 +2198,8 @@ function buildJets(){
   });
 }
 
-// =========================================================================
 // FIX #5: PHOTON SPHERE — Split into prograde and retrograde orbits
 // Prograde: r = 2.013M, Retrograde: r = 3.725M (was single 3.0M)
-// =========================================================================
 function buildPhotonSphere(){
   // Prograde photon orbit at 2.013M → sim scale ~1.4 (using same scale as ISCO)
   const progradeR = 2.013 / 3.393 * 2.36;   // ~1.40 sim units
@@ -2429,9 +2436,7 @@ function skipToPhase(p){resetAll();for(let i=0;i<p;i++)advancePhase();
 
 function tog(k,el){show[k]=!show[k];el.classList.toggle('on');}
 
-// ============================================================================
 // MAIN ANIMATION LOOP
-// ============================================================================
 function animate(){
   requestAnimationFrame(animate);
   speedMul=parseFloat(document.getElementById('sl-speed').value);
@@ -2638,9 +2643,7 @@ function animate(){
   pipeline.strength = bloomStrength * bloomUserMul;
   pipeline.radius = bloomRadius;
 
-  // =========================================================================
   // PHASE LOGIC (corrected order and physics)
-  // =========================================================================
   if(currentPhase===0){
     star.radius=3+Math.sin(simTime*0.3)*0.1;
     star.color=[1,0.85,0.3];
@@ -3184,10 +3187,7 @@ function animate(){
   renderer.toneMappingExposure = baseExposure + flashIntensity * 5;
   flashIntensity = Math.max(0, flashIntensity - dt * 0.8);
 
-  // =========================================================================
-  // HUD updates — corrected physics values
-  // =========================================================================
-  // FIX: Corrected phase names
+  // HUD updates — corrected physics value
   const names=['Main Sequence','Red Supergiant','Supernova','Neutron Star',
     'Black Hole (Kerr)','Relativistic Jets (BZ)','Consuming Planets',
     'Hawking Evaporation','BH Explosion','Particle Remnant'];
