@@ -497,7 +497,9 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
+// ============================================================================
 // SHARED GLSL: 3D Simplex Noise + FBM (injected into all shaders)
+// ============================================================================
 const NOISE_GLSL = `
 vec3 mod289(vec3 x){return x-floor(x*(1.0/289.0))*289.0;}
 vec4 mod289(vec4 x){return x-floor(x*(1.0/289.0))*289.0;}
@@ -567,7 +569,9 @@ float turbulence(vec3 p){
 }
 `;
 
+// ============================================================================
 // BLOOM POST-PROCESSING
+// ============================================================================
 class AdvancedPipeline {
   constructor(renderer, w, h) {
     this.renderer = renderer;
@@ -674,12 +678,14 @@ class AdvancedPipeline {
     }
   }
 
+  // =========================================================================
   // FIX #1: GRAVITATIONAL LENSING — Corrected physics
   // - Shadow radius: ~2.6 R_s (was 0.4 R_s — 6.5× too small)
   // - D-shaped shadow for Kerr a/M=0.7 (was circular)
   // - Deflection: α = 2R_s/b (linear, was quadratic R_s²/dist)
   // - Photon ring at correct location ~2.6 R_s
   // - Strong-field logarithmic divergence near photon sphere
+  // =========================================================================
   initLensing(w, h) {
     const pars = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat };
     this.lensingRT = new THREE.WebGLRenderTarget(w, h, pars);
@@ -865,7 +871,9 @@ const PHYS = {
   T_SI_BURN_FINAL: 3.5e9, // Silicon → Iron
 };
 
+// ============================================================================
 // MAIN SIMULATION
+// ============================================================================
 let scene,camera,renderer,clock,pipeline;
 let starGroup,fabricMesh,lensingGroup,photonSystems=[];
 let simTime=0,speedMul=1,waveFreq=10;
@@ -1080,11 +1088,13 @@ function buildStar(){
     transparent:true,side:THREE.BackSide,depthWrite:false,blending:THREE.AdditiveBlending});
   starGroup.add(new THREE.Mesh(gG,gM));starGroup.userData.glowMat=gM;
 
+  // =========================================================================
   // FIX #2: ACCRETION DISK — Corrected Kerr physics
   // - ISCO at 3.393M (was 3.60M) → sim units ISCO_SIM = 2.36
   // - Doppler beaming: g⁴ bolometric (was D³g²)
   // - Orbital velocity: Kerr formula v = (Ω-ω)√(gφφ)/α (was Schwarzschild)
   // - Kerr orbital frequency: Ω = M^½/(r^(3/2) + aM^½)
+  // =========================================================================
   const ISCO_SIM = 2.36;  // FIX: was 2.5, now maps to 3.393M
   const dG=new THREE.RingGeometry(ISCO_SIM, 16, 256, 12);
   const dM=new THREE.ShaderMaterial({uniforms:{
@@ -1569,83 +1579,275 @@ function buildHawking(){
 }
 
 function buildExplosion(){
-  explosionParticles=makeParticleSystem(15000,(i,p,v,c,s,l)=>{
+  // Hawking final burst: T_H → 10^17 K, pair-plasma fireball + gamma-ray flash
+  // Two populations:
+  //   1) Gamma/pair particles: isotropic, fast, blue-white (pair annihilation 511keV)
+  //   2) Equatorial ring: ergosphere preferential emission (Penrose geometry), spin-boosted
+  explosionParticles=makeParticleSystem(18000,(i,p,v,c,s,l)=>{
     p[i*3]=p[i*3+1]=p[i*3+2]=0;
-    const th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1),sp=3+Math.random()*25;
-    v[i*3]=sp*Math.sin(ph)*Math.cos(th);v[i*3+1]=sp*Math.sin(ph)*Math.sin(th);v[i*3+2]=sp*Math.cos(ph);
-    l[i]=0.5+Math.random()*0.5;
-    const t=Math.random();c[i*3]=t<0.25?1:t<0.5?1:t<0.75?1:0.5;
-    c[i*3+1]=t<0.25?0.95:t<0.5?0.6:t<0.75?0.2:0.2;c[i*3+2]=t<0.25?0.8:t<0.5?0.1:t<0.75?0.5:1;
-    s[i]=0.3+Math.random()*2.5;
+    const th=Math.random()*Math.PI*2;
+    const isEquatorial = i < 6000; // first third: ergosphere equatorial emission
+    let ph, sp;
+    if(isEquatorial){
+      // Ergosphere emission concentrated near equatorial plane
+      // sin^2(theta) distribution — peaks at equator
+      const sinSq = Math.random();
+      ph = Math.asin(Math.sqrt(sinSq)) * (Math.random()<0.5?1:-1) + Math.PI/2;
+      sp = 8 + Math.random()*30; // faster — Penrose-boosted
+    } else {
+      ph = Math.acos(2*Math.random()-1);
+      sp = 3 + Math.random()*20;
+    }
+    v[i*3]=sp*Math.sin(ph)*Math.cos(th);
+    v[i*3+1]=sp*Math.sin(ph)*Math.sin(th);
+    v[i*3+2]=sp*Math.cos(ph);
+    l[i]=0.4+Math.random()*0.6;
+    // Spectral blueshift: T_H sweeps IR→UV→gamma as M→0
+    // Color encodes photon energy: low-energy = red/orange, high-energy = blue/white/UV
+    const energy = Math.random();
+    if(energy < 0.15){       // soft X-ray / UV fringe
+      c[i*3]=0.7; c[i*3+1]=0.8; c[i*3+2]=1.0;
+    } else if(energy < 0.5){ // peak emission — blue-white pair annihilation (511keV visual proxy)
+      c[i*3]=0.85; c[i*3+1]=0.92; c[i*3+2]=1.0;
+    } else if(energy < 0.75){// hard gamma — pure white
+      c[i*3]=1.0; c[i*3+1]=1.0; c[i*3+2]=1.0;
+    } else {                  // Penrose equatorial boost — electric blue
+      c[i*3]=0.3; c[i*3+1]=0.6; c[i*3+2]=1.0;
+    }
+    s[i]=0.2+Math.random()*2.0;
   },`attribute float size,life;attribute vec3 color,velocity;uniform float uTime,uAlpha;varying vec3 vC;varying float vA;
-    void main(){vC=color;float age=uTime/life;vec3 p=position+velocity*uTime*(1.-age*0.3);
-      vA=uAlpha*(1.-smoothstep(0.6,1.,age));vec4 mv=modelViewMatrix*vec4(p,1.);
-      gl_PointSize=size*(1.+uTime*0.5)*(150./-mv.z);gl_Position=projectionMatrix*mv;}`,
-  `varying vec3 vC;varying float vA;void main(){float d=length(gl_PointCoord-.5)*2.;float a=1.-smoothstep(0.,1.,d);gl_FragColor=vec4(vC*(1.+vA*.5),a*a*vA);}`,
+    void main(){
+      vC=color;
+      float age=uTime/life;
+      // Relativistic deceleration: ISM drag slows ejecta as swept mass grows
+      // v(t) ~ v0 / (1 + t/t_dec) — Sedov-Taylor-like
+      vec3 p=position+velocity*(uTime/(1.0+uTime*0.04));
+      // Pair-plasma annihilates as it cools — fade as density drops
+      vA=uAlpha*(1.-smoothstep(0.5,1.,age));
+      vec4 mv=modelViewMatrix*vec4(p,1.);
+      gl_PointSize=size*(1.+uTime*0.3)*(160./-mv.z);
+      gl_Position=projectionMatrix*mv;
+    }`,
+  `varying vec3 vC;varying float vA;
+    void main(){
+      float d=length(gl_PointCoord-0.5)*2.0;
+      // Soft diffuse glow — photon gas, not solid particles
+      float a=exp(-d*d*3.0);
+      gl_FragColor=vec4(vC*1.8,a*vA);
+    }`,
   {life:true});
 }
 
 function buildDust(){
-  dustParticles=makeParticleSystem(20000,(i,p,v,c,s)=>{
-    const th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1),r=0.5+Math.random()*3;
-    p[i*3]=r*Math.sin(ph)*Math.cos(th);p[i*3+1]=r*Math.sin(ph)*Math.sin(th);p[i*3+2]=r*Math.cos(ph);
-    const sp=0.5+Math.random()*4;v[i*3]=p[i*3]/r*sp+(Math.random()-.5)*1.5;
-    v[i*3+1]=p[i*3+1]/r*sp+(Math.random()-.5)*1.5;v[i*3+2]=p[i*3+2]/r*sp+(Math.random()-.5)*1.5;
-    const t=Math.random();c[i*3]=t<0.3?0.6:t<0.55?0.4:0.8;c[i*3+1]=t<0.3?0.3:t<0.55?0.35:0.4;
-    c[i*3+2]=t<0.3?0.15:t<0.55?0.3:0.2;s[i]=0.3+Math.random()*1.8;
+  // Rayleigh-Taylor filaments: hot pair-plasma pushing into cold ISM
+  // Growth rate gamma = sqrt(A*k*g), Atwood A ~ 0.9 (large density contrast)
+  // Produces radial finger-like concentrations modulated by wavenumber k
+  // Colors: pair annihilation blue-white + synchrotron electric blue
+  // NO reds/oranges — no hydrogen recombination source without stellar remnant
+  dustParticles=makeParticleSystem(22000,(i,p,v,c,s)=>{
+    const th=Math.random()*Math.PI*2;
+    const ph=Math.acos(2*Math.random()-1);
+    // R-T filament seeds: clump particles into discrete angular sectors
+    // Each filament is a radial column — discretize into ~20 fingers
+    const fingerN = 20;
+    const fingerIdx = Math.floor(Math.random()*fingerN);
+    const fingerTh = (fingerIdx/fingerN)*Math.PI*2 + (Math.random()-0.5)*0.25;
+    const fingerPh = Math.acos(2*(fingerIdx%5)/5 - 1) + (Math.random()-0.5)*0.3;
+    // Mix: 60% in filaments, 40% diffuse inter-filament gas
+    const inFilament = Math.random() < 0.60;
+    const useTh = inFilament ? fingerTh : th;
+    const usePh = inFilament ? fingerPh : ph;
+    const r = 0.3 + Math.random()*2.5;
+    p[i*3]=r*Math.sin(usePh)*Math.cos(useTh);
+    p[i*3+1]=r*Math.sin(usePh)*Math.sin(useTh);
+    p[i*3+2]=r*Math.cos(usePh);
+    // Velocity: radial outward + lateral turbulence from R-T instability
+    const sp = inFilament ? (1.5+Math.random()*5) : (0.3+Math.random()*2);
+    const rLen = Math.sqrt(p[i*3]*p[i*3]+p[i*3+1]*p[i*3+1]+p[i*3+2]*p[i*3+2])+0.001;
+    v[i*3]=p[i*3]/rLen*sp + (Math.random()-0.5)*0.8;
+    v[i*3+1]=p[i*3+1]/rLen*sp + (Math.random()-0.5)*0.8;
+    v[i*3+2]=p[i*3+2]/rLen*sp + (Math.random()-0.5)*0.8;
+    // Synchrotron + pair-annihilation spectrum: blues, blue-whites, pale violets
+    const spectral = Math.random();
+    if(spectral < 0.30){       // synchrotron: electric blue
+      c[i*3]=0.2; c[i*3+1]=0.5; c[i*3+2]=1.0;
+    } else if(spectral < 0.55){ // pair annihilation: blue-white
+      c[i*3]=0.6; c[i*3+1]=0.8; c[i*3+2]=1.0;
+    } else if(spectral < 0.75){ // thermal photon bath: pale cyan
+      c[i*3]=0.4; c[i*3+1]=0.85; c[i*3+2]=0.95;
+    } else if(spectral < 0.90){ // high-energy tail: pale violet
+      c[i*3]=0.75; c[i*3+1]=0.6; c[i*3+2]=1.0;
+    } else {                    // forward shock: white-blue
+      c[i*3]=0.9; c[i*3+1]=0.95; c[i*3+2]=1.0;
+    }
+    s[i]=inFilament ? (0.4+Math.random()*1.6) : (0.2+Math.random()*0.8);
   },`attribute float size;attribute vec3 color,velocity;uniform float uTime,uAlpha;varying vec3 vC;varying float vA;
-    void main(){vC=color;vec3 p=position+velocity*uTime;vA=uAlpha*(1.-smoothstep(25.,60.,length(p)));
-      vec4 mv=modelViewMatrix*vec4(p,1.);gl_PointSize=size*(1.+uTime*0.15)*(120./-mv.z);gl_Position=projectionMatrix*mv;}`,
-  `varying vec3 vC;varying float vA;void main(){float d=length(gl_PointCoord-.5)*2.;float a=1.-smoothstep(0.,.85,d);gl_FragColor=vec4(vC,a*vA*0.7);}`);
+    void main(){
+      vC=color;
+      // Sedov-Taylor blast wave deceleration: r ~ t^(2/5)
+      float tPow = pow(max(uTime,0.001), 0.4);
+      vec3 p=position+velocity*tPow*2.5;
+      // Filament particles maintain coherence longer (higher density = slower dispersion)
+      vA=uAlpha*(1.-smoothstep(30.,70.,length(p)));
+      vec4 mv=modelViewMatrix*vec4(p,1.);
+      gl_PointSize=size*(1.+tPow*0.2)*(130./-mv.z);
+      gl_Position=projectionMatrix*mv;
+    }`,
+  `varying vec3 vC;varying float vA;
+    void main(){
+      float d=length(gl_PointCoord-0.5)*2.0;
+      float a=1.0-smoothstep(0.0,0.9,d);
+      gl_FragColor=vec4(vC,a*vA*0.75);
+    }`);
 }
 
-// FIX #3: Renamed from buildNebula → buildRemnant
-// BH evaporation does NOT produce a planetary nebula.
-// Phase 9 now shows a high-energy particle remnant cloud (gamma-ray flash debris)
-// with appropriate hot, bluish-white coloring instead of nebular ionized gas
+// =========================================================================
+// buildRemnant — Physically grounded Hawking evaporation remnant
+//
+// Structure derived from:
+//   1. EQUATORIAL TORUS: ergosphere preferential emission. The Kerr BH spin
+//      concentrates final Hawking emission near the equatorial plane via the
+//      Penrose process. The pair-plasma expands into a flattened torus.
+//      Density ∝ sin²(θ) — peaks at equator, vanishes at poles.
+//
+//   2. BIPOLAR LOBES: Along the spin axis, radiation pressure from the final
+//      burst creates two low-density but bright lobes. These are the "jets"
+//      of the Hawking explosion — analogous to planetary nebula bipolar
+//      morphology but driven by spin-axis radiation anisotropy, not stellar wind.
+//      Density ∝ exp(-θ²/σ²) where σ ~ 25° half-angle.
+//
+//   3. RAYLEIGH-TAYLOR SHELLS: The expanding hot plasma pushes into cold ISM.
+//      R-T instability growth rate γ = √(Akg), Atwood A~0.9. This produces
+//      radial filamentary structure visible as broken concentric shells with
+//      finger-like protrusions — characteristic of supernova remnants like
+//      Cassiopeia A, but here driven by pair-plasma not nucleosynthesis ejecta.
+//
+//   4. COLORS — no warm tones:
+//      - Blue-white: pair annihilation (e+e- → 2γ at 511keV, T~10^10 K)
+//      - Electric blue: synchrotron radiation from relativistic electrons
+//      - Pale violet: inverse Compton scattered CMB photons
+//      - Cyan: thermal bremsstrahlung from cooling pair plasma (T~10^8 K)
+//      NO red/orange: those require H-alpha (656nm) recombination which needs
+//      a photoionizing stellar remnant. There is none here.
+// =========================================================================
 function buildRemnant(){
-  // FIX: Colors changed from nebular (cool ionized gas) to hot particle debris
-  const data=[
-    {r:8,c:[0.7,0.8,1.0],o:0.10},   // hot gamma-ray debris
-    {r:14,c:[0.5,0.6,1.0],o:0.08},   // cooling relativistic ejecta
-    {r:20,c:[0.8,0.7,1.0],o:0.06},   // pair-production halo
-    {r:26,c:[0.4,0.5,0.9],o:0.05},   // thermal photon bath
-    {r:10,c:[1.0,0.9,0.7],o:0.07},   // thermal flash remnant
-    {r:17,c:[0.6,0.7,1.0],o:0.05},   // scattered radiation
+  const shells=[
+    // EQUATORIAL TORUS — flattened, dense, pair-annihilation blue-white
+    // sin²θ geometry: y-scale compressed to 0.35 to create oblate torus shape
+    {r:9,  c:[0.70,0.85,1.00], o:0.18, scaleY:0.35, type:'equatorial'},
+    {r:16, c:[0.55,0.75,1.00], o:0.13, scaleY:0.40, type:'equatorial'},
+
+    // BIPOLAR LOBES — elongated along Y (spin axis), electric blue synchrotron
+    // scaleY > 1 stretches sphere into prolate ellipsoid along spin axis
+    {r:11, c:[0.30,0.55,1.00], o:0.14, scaleY:2.80, type:'bipolar'},
+    {r:18, c:[0.20,0.45,0.95], o:0.09, scaleY:3.20, type:'bipolar'},
+
+    // RAYLEIGH-TAYLOR SHELLS — roughly spherical but heavily fragmented by noise
+    // These are the "bubble walls" where R-T fingers have swept up ISM
+    {r:13, c:[0.50,0.80,0.95], o:0.10, scaleY:1.00, type:'rt_shell'},
+    {r:22, c:[0.45,0.65,1.00], o:0.07, scaleY:1.10, type:'rt_shell'},
+    {r:30, c:[0.35,0.50,0.90], o:0.05, scaleY:1.05, type:'rt_shell'},
+
+    // OUTER HALO — thermal photon bath (T~10^6 K), pale violet inverse Compton
+    {r:38, c:[0.65,0.55,1.00], o:0.04, scaleY:0.90, type:'halo'},
   ];
-  data.forEach(sd=>{
-    const mat=new THREE.ShaderMaterial({uniforms:{uTime:{value:0},uColor:{value:new THREE.Vector3(...sd.c)},uAlpha:{value:0},uBaseOp:{value:sd.o}},
-      vertexShader:`varying vec3 vN,vP,vW;void main(){vN=normalize(normalMatrix*normal);vW=position;
-        vP=(modelViewMatrix*vec4(position,1.)).xyz;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
-      fragmentShader: NOISE_GLSL + `
-        uniform float uTime,uAlpha,uBaseOp;uniform vec3 uColor;varying vec3 vN,vP,vW;
+
+  shells.forEach((sd,idx)=>{
+    const isEquatorial = sd.type==='equatorial';
+    const isBipolar    = sd.type==='bipolar';
+    const isRT         = sd.type==='rt_shell';
+
+    const mat=new THREE.ShaderMaterial({
+      uniforms:{
+        uTime:{value:0},
+        uColor:{value:new THREE.Vector3(...sd.c)},
+        uAlpha:{value:0},
+        uBaseOp:{value:sd.o},
+        uType:{value: isEquatorial?0.0 : isBipolar?1.0 : isRT?2.0 : 3.0},
+      },
+      vertexShader:`
+        varying vec3 vN, vP, vW;
         void main(){
-          float f=pow(1.-abs(dot(normalize(-vP),vN)),2.);
-          float cloudDensity = fbm(vW * 0.15 + uTime * 0.05);
-          float fineDetail = turbulence(vW * 0.4 + uTime * 0.08);
-          float filaments = pow(abs(snoise(vW * 0.08 + uTime * 0.02)), 1.5);
-          float density = cloudDensity * 0.5 + fineDetail * 0.3 + filaments * 0.4 + 0.3;
-          density = clamp(density, 0.0, 1.0);
-          vec3 colorVar = uColor + vec3(
-            snoise(vW * 0.05 + 10.0) * 0.15,
-            snoise(vW * 0.05 + 20.0) * 0.15,
-            snoise(vW * 0.05 + 30.0) * 0.15
-          );
-          vec3 c = colorVar * (1.0 + density * 0.5) + colorVar * f * 0.8;
-          float a = clamp(f * uBaseOp * uAlpha * density, 0.0, 0.35);
-          gl_FragColor = vec4(c * 1.5, a);
+          vN = normalize(normalMatrix * normal);
+          vW = position;
+          vP = (modelViewMatrix * vec4(position, 1.0)).xyz;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
         }`,
-      transparent:true,side:THREE.DoubleSide,depthWrite:false,blending:THREE.AdditiveBlending});
-    const mesh=new THREE.Mesh(new THREE.SphereGeometry(sd.r,48,48),mat);
-    mesh.rotation.set(Math.random()*Math.PI,Math.random()*Math.PI,Math.random()*Math.PI);mesh.visible=false;
-    scene.add(mesh);nebulaShells.push({mesh,mat,baseR:sd.r});
+      fragmentShader: NOISE_GLSL + `
+        uniform float uTime, uAlpha, uBaseOp, uType;
+        uniform vec3 uColor;
+        varying vec3 vN, vP, vW;
+
+        void main(){
+          // Rim lighting — edge of shell glows brightest (limb brightening)
+          float rim = 1.0 - abs(dot(normalize(-vP), vN));
+          float limbBright = pow(rim, 1.8);
+
+          // Normalised polar angle: cosTheta=0 at equator, ±1 at poles
+          float cosTheta = normalize(vW).y;
+          float sinTheta2 = 1.0 - cosTheta*cosTheta; // sin²θ
+
+          float geomMask;
+
+          if(uType < 0.5){
+            // EQUATORIAL TORUS: density ∝ sin²θ — peaks at equator
+            // Sharpen with power to get a thinner torus ring
+            geomMask = pow(sinTheta2, 3.0);
+          } else if(uType < 1.5){
+            // BIPOLAR LOBES: density ∝ exp(-sin²θ / 2σ²), σ~0.18 rad (~10°)
+            // Only bright near poles (|cosTheta| → 1)
+            float sigma2 = 0.18;
+            geomMask = exp(-sinTheta2 / (2.0*sigma2));
+          } else if(uType < 2.5){
+            // RAYLEIGH-TAYLOR SHELL: roughly isotropic but broken by instability
+            // fingers. Use fbm to carve holes — R-T produces ~30% void fraction
+            float shell = fbm(vW * 0.10 + uTime * 0.03);       // large-scale bubbles
+            float fingers = pow(abs(snoise(vW * 0.22 + uTime * 0.04)), 2.2); // R-T fingers
+            float smallScale = turbulence(vW * 0.55 + uTime * 0.06); // small clumps
+            // Combine: shell structure + filaments + fine detail
+            geomMask = clamp(shell*0.5 + fingers*0.6 + smallScale*0.3, 0.0, 1.0);
+          } else {
+            // OUTER HALO: smooth, fading with slight anisotropy from spin
+            geomMask = 0.6 + 0.4*sinTheta2; // slightly brighter at equator
+          }
+
+          // Color variation: slight spectral shift across shell surface
+          // Models local temperature fluctuations in the plasma
+          vec3 colorShift = vec3(
+            snoise(vW * 0.06 + 7.0)  * 0.12,
+            snoise(vW * 0.06 + 14.0) * 0.10,
+            snoise(vW * 0.06 + 21.0) * 0.08
+          );
+          vec3 col = uColor + colorShift;
+
+          // Pair-annihilation brightening: hotter regions pulse slightly
+          float pulse = 0.85 + 0.15 * sin(uTime * 0.8 + length(vW) * 0.3);
+          col *= pulse;
+
+          float alpha = limbBright * geomMask * uBaseOp * uAlpha;
+          alpha = clamp(alpha, 0.0, 0.40);
+
+          gl_FragColor = vec4(col * 1.6, alpha);
+        }`,
+      transparent:true, side:THREE.DoubleSide, depthWrite:false,
+      blending:THREE.AdditiveBlending
+    });
+
+    // Apply geometric scaling — equatorial torus is oblate, bipolar lobes are prolate
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(sd.r, 64, 64), mat);
+    mesh.scale.set(1.0, sd.scaleY, 1.0);
+    // Align spin axis with Y — slight tilt for realism (BH spin axis rarely perpendicular)
+    mesh.rotation.set(0.15 + idx*0.05, Math.random()*Math.PI*2, 0.08);
+    mesh.visible = false;
+    scene.add(mesh);
+    nebulaShells.push({mesh, mat, baseR:sd.r});
   });
 }
 
 function buildNeutronStar(){
   neutronStarGroup = new THREE.Group();
 
-  //  MAGNETIC AXIS PIVOT 
+  // ── MAGNETIC AXIS PIVOT ───────────────────────────────────────────────────
   // Reference image: beams and field lines align on a magnetic axis tilted
   // ~30° from the spin axis. All non-core geometry mounts on this pivot.
   const magPivot = new THREE.Group();
@@ -1653,7 +1855,7 @@ function buildNeutronStar(){
   neutronStarGroup.add(magPivot);
   neutronStarGroup.userData.magPivot = magPivot;
 
-  //CORE SPHERE bright white, slight blue tint
+  // ── CORE SPHERE — bright white, slight blue tint ──────────────────────────
   const nsCore = new THREE.Mesh(
     new THREE.SphereGeometry(1.5, 64, 64),
     new THREE.ShaderMaterial({
@@ -1691,7 +1893,7 @@ function buildNeutronStar(){
   neutronStarGroup.add(nsCore);
   neutronStarGroup.userData.coreMat = nsCore.material;
 
-  // SURFACE GLOW tight white rim around the sphere
+  // ── SURFACE GLOW — tight white rim around the sphere ─────────────────────
   const rimMat = new THREE.ShaderMaterial({
     uniforms:{ uTime:{value:0}, uAlpha:{value:0} },
     vertexShader:`varying vec3 vP; varying vec3 vN;
@@ -1714,7 +1916,7 @@ function buildNeutronStar(){
   neutronStarGroup.add(new THREE.Mesh(new THREE.SphereGeometry(1.68, 64, 64), rimMat));
   neutronStarGroup.userData.haloMat = rimMat;
 
-  // DIPOLE MAGNETIC FIELD LINES
+  // ── DIPOLE MAGNETIC FIELD LINES ───────────────────────────────────────────
   // Reference image shows closed dipole loops (like a bar magnet), NOT open lines.
   // Parametric dipole field line: r = r0 * cos²(λ) where λ is magnetic latitude.
   // Lines distributed evenly in azimuth around the magnetic axis.
@@ -1786,7 +1988,7 @@ function buildNeutronStar(){
     magPivot.add(coreMesh);
   }
 
-  // PULSAR BEAMS
+  // ── PULSAR BEAMS ──────────────────────────────────────────────────────────
   // Reference: two wide bright CONES shooting outward from both magnetic poles.
   // White-purple color, broad base, tight bright core + soft outer collar.
   // CylinderGeometry(tipRadius=0, baseRadius, height) — tip=top(+Y), base=bottom(-Y).
@@ -1859,7 +2061,7 @@ function buildNeutronStar(){
     }
   }
 
-  // PHOTON RING / LENSING HALO
+  // ── PHOTON RING / LENSING HALO ────────────────────────────────────────────
   // Thin equatorial torus of bent starlight at the photon sphere
   const photonRingMat = new THREE.ShaderMaterial({
     uniforms:{ uTime:{value:0}, uAlpha:{value:0} },
@@ -1910,8 +2112,10 @@ function buildNeutronStar(){
   neutronStarGroup.visible = false;
   scene.add(neutronStarGroup);
 }
+// =========================================================================
 // FIX #4: JETS — Now BZ jets (appear AFTER BH formation, not during NS phase)
 // Parameters updated to collapsar GRB values: Γ~100, half-angle ~5°
+// =========================================================================
 function buildJets(){
   const N = 4000;
   [1, -1].forEach((sign, idx) => {
@@ -1985,8 +2189,10 @@ function buildJets(){
   });
 }
 
+// =========================================================================
 // FIX #5: PHOTON SPHERE — Split into prograde and retrograde orbits
 // Prograde: r = 2.013M, Retrograde: r = 3.725M (was single 3.0M)
+// =========================================================================
 function buildPhotonSphere(){
   // Prograde photon orbit at 2.013M → sim scale ~1.4 (using same scale as ISCO)
   const progradeR = 2.013 / 3.393 * 2.36;   // ~1.40 sim units
@@ -2223,6 +2429,9 @@ function skipToPhase(p){resetAll();for(let i=0;i<p;i++)advancePhase();
 
 function tog(k,el){show[k]=!show[k];el.classList.toggle('on');}
 
+// ============================================================================
+// MAIN ANIMATION LOOP
+// ============================================================================
 function animate(){
   requestAnimationFrame(animate);
   speedMul=parseFloat(document.getElementById('sl-speed').value);
@@ -2429,6 +2638,9 @@ function animate(){
   pipeline.strength = bloomStrength * bloomUserMul;
   pipeline.radius = bloomRadius;
 
+  // =========================================================================
+  // PHASE LOGIC (corrected order and physics)
+  // =========================================================================
   if(currentPhase===0){
     star.radius=3+Math.sin(simTime*0.3)*0.1;
     star.color=[1,0.85,0.3];
@@ -2694,38 +2906,111 @@ function animate(){
   }
   else if(currentPhase===8){
     const t=pP;
-    if(t<0.15) flashIntensity=Math.max(flashIntensity,ease(t/0.15)*3.0);
-    starGroup.visible=t<0.05;lensingGroup.visible=false;
-    hawkingParticles.visible=false;
-    if(photonSphereRing) photonSphereRing.visible=false;
-    if(photonRingRetro) photonRingRetro.visible=false;
-    if(ergosphereShell) ergosphereShell.visible=false;
-    explosionParticles.visible=true;
-    explosionParticles.material.uniforms.uTime.value=phaseTime;
-    explosionParticles.material.uniforms.uAlpha.value=Math.max(0,1-t*0.5);
-    shockwave2.scale.set(1+t*120,1+t*120,1);
-    shockwave2.material.opacity=Math.max(0,0.8-t);
-    shockwave2.material.color.setRGB(1,0.8-t*0.5,1-t*0.7);
-    star.mass=Math.max(0.01,1-t*1);star.accretionOpacity=0;
-    if(t<0.3){camera.position.x+=(Math.random()-0.5)*0.5*(1-t/0.3);camera.position.y+=(Math.random()-0.5)*0.5*(1-t/0.3);}
-    if(pP>=1)advancePhase();
+    // PHYSICS: T_H → ∞ as M→0. Spectral blueshift: IR→Vis→UV→X→gamma
+    // The burst color sweeps from warm-white through blue to pure UV white
+    // Timeline: t<0.05 final flicker, t<0.15 blueshift peak, t>0.15 fireball expansion
+    if(t < 0.05){
+      // Final Hawking flicker — BH still exists, T_H ~ 10^15 K (W/Z boson production)
+      flashIntensity = Math.max(flashIntensity, ease(t/0.05)*1.2);
+      starGroup.visible = true;
+      lensingGroup.visible = true;
+    } else {
+      // BH ceases to exist — Planck-time endpoint
+      starGroup.visible = false;
+      lensingGroup.visible = false;
+    }
+    hawkingParticles.visible = t < 0.05;
+    if(photonSphereRing) photonSphereRing.visible = t < 0.05;
+    if(photonRingRetro) photonRingRetro.visible = t < 0.05;
+    if(ergosphereShell) ergosphereShell.visible = t < 0.05;
+
+    // Peak gamma-ray flash: t=0.05–0.20 — T_H ~ 10^17 K
+    if(t >= 0.05 && t < 0.20){
+      const bt = (t-0.05)/0.15;
+      flashIntensity = Math.max(flashIntensity, 3.5*(1.0-bt*0.3));
+    }
+
+    explosionParticles.visible = true;
+    explosionParticles.material.uniforms.uTime.value = phaseTime;
+    // Pair-plasma fades as e+e- annihilate and photon gas dilutes
+    explosionParticles.material.uniforms.uAlpha.value = Math.max(0, 1.0 - t*0.55);
+
+    // Shockwave: forward blast wave from Hawking explosion into ISM
+    // Sedov-Taylor: R ~ t^(2/5), but we're compressing timescale
+    const swR = Math.pow(Math.max(0,t), 0.4) * 160.0;
+    shockwave2.scale.set(1+swR, 1+swR, 1);
+    // Color sweeps: white-hot → blue-white → UV blue as blast cools
+    shockwave2.material.opacity = Math.max(0, 0.9 - t*0.85);
+    shockwave2.material.color.setRGB(
+      0.8 + (1-t)*0.2,         // R: starts white, stays bright
+      0.85 + (1-t)*0.15,       // G: nearly white
+      1.0                       // B: always maximum — this is a UV/blue event
+    );
+
+    star.mass = Math.max(0.01, 1.0 - t);
+    star.accretionOpacity = 0;
+    // Camera shake: gravitational wave burst at BH annihilation
+    if(t < 0.12){
+      const shake = (0.12-t)/0.12;
+      camera.position.x += (Math.random()-0.5)*0.6*shake;
+      camera.position.y += (Math.random()-0.5)*0.6*shake;
+    }
+    if(pP>=1) advancePhase();
   }
-  // FIX: Phase 9 = PARTICLE REMNANT (was "Planetary Nebula" — impossible from BH evaporation)
+  // Phase 9: Hawking explosion remnant — structured nebula with physical geometry
   else if(currentPhase===9){
-    starGroup.visible=false;lensingGroup.visible=false;
+    starGroup.visible=false; lensingGroup.visible=false;
     if(photonSphereRing) photonSphereRing.visible=false;
-    if(photonRingRetro) photonRingRetro.visible=false;
-    if(ergosphereShell) ergosphereShell.visible=false;
+    if(photonRingRetro)  photonRingRetro.visible=false;
+    if(ergosphereShell)  ergosphereShell.visible=false;
+
+    // Pair-plasma fireball fades as it disperses into R-T filaments
     explosionParticles.visible=true;
-    explosionParticles.material.uniforms.uTime.value=PHASE_DURATIONS[8]+phaseTime*0.3;
-    explosionParticles.material.uniforms.uAlpha.value=Math.max(0,0.5-pP*0.6);
-    dustParticles.visible=true;dustParticles.material.uniforms.uTime.value=phaseTime;
-    dustParticles.material.uniforms.uAlpha.value=Math.min(0.8,pP*2);
-    if(pP>0.15){const nt=(pP-0.15)/0.85;nebulaShells.forEach((ns,i)=>{ns.mesh.visible=true;const a=Math.max(0,Math.min(1,(nt-i*0.08)*2));
-      ns.mat.uniforms.uAlpha.value=a;ns.mat.uniforms.uTime.value=simTime;const sc=0.3+a*0.7+nt*0.3;ns.mesh.scale.set(sc,sc,sc);
-      ns.mesh.rotation.y+=dt*0.02*(i%2===0?1:-1);ns.mesh.rotation.x+=dt*0.01;});}
-    const ft=Math.min(1,pP*1.5);scene.fog.color.setRGB(0.01+ft*0.04,0.01+ft*0.01,0.04+ft*0.06);
-    if(!scene.background)scene.background=new THREE.Color(0,0,0);scene.background.setRGB(ft*0.02,ft*0.005,ft*0.03);
+    explosionParticles.material.uniforms.uTime.value=PHASE_DURATIONS[8]+phaseTime*0.25;
+    explosionParticles.material.uniforms.uAlpha.value=Math.max(0, 0.6 - pP*0.7);
+
+    // R-T filament dust expands on Sedov-Taylor timescale
+    dustParticles.visible=true;
+    dustParticles.material.uniforms.uTime.value=phaseTime;
+    dustParticles.material.uniforms.uAlpha.value=Math.min(0.85, pP*2.2);
+
+    // Nebula shells emerge in physical order:
+    // Inner shells (equatorial torus + RT) appear first — shorter light-travel time
+    // Outer halo appears last — furthest from explosion centre
+    // Each shell type has distinct expansion velocity based on its driving mechanism
+    if(pP > 0.05){
+      const nt = (pP-0.05)/0.95;
+      nebulaShells.forEach((ns, i)=>{
+        ns.mesh.visible = true;
+        // Staggered appearance: inner shells first, outer halo last
+        const appearT = Math.max(0, Math.min(1, (nt - i*0.06)*2.5));
+        ns.mat.uniforms.uAlpha.value = appearT;
+        ns.mat.uniforms.uTime.value  = simTime;
+
+        // Differential expansion:
+        // Equatorial torus (i=0,1): slower radial, maintained oblate shape
+        // Bipolar lobes (i=2,3): fast axial expansion along spin axis
+        // R-T shells (i=4,5,6): intermediate, slightly irregular
+        // Outer halo (i=7): fastest — photon gas at near-c
+        const expansionRates = [0.6, 0.55, 1.4, 1.3, 0.9, 0.85, 0.80, 1.8];
+        const rate = expansionRates[Math.min(i, expansionRates.length-1)];
+        const sc = 0.15 + appearT*0.7 + nt*rate*0.5;
+
+        // Preserve the geometric scaling (equatorial = oblate, bipolar = prolate)
+        // by only scaling uniformly — the mesh.scale.y was set in buildRemnant
+        const baseScaleY = ns.mesh.scale.y > 1.5 ? ns.mesh.scale.y/Math.max(0.01,ns.mesh.scale.x) :
+                           ns.mesh.scale.y < 0.5 ? ns.mesh.scale.y/Math.max(0.01,ns.mesh.scale.x) : 1.0;
+        ns.mesh.scale.set(sc, sc * (ns.mat.uniforms.uType ? 1.0 : 1.0), sc);
+        // Slow precession: spin axis precesses due to radiation pressure asymmetry
+        ns.mesh.rotation.y += dt * 0.015 * (i%2===0 ? 1 : -1);
+      });
+    }
+
+    // Fog deepens as pair-plasma thermalises with ISM — universe returns to darkness
+    const ft = Math.min(1, pP*1.3);
+    scene.fog.color.setRGB(0.01+ft*0.02, 0.005+ft*0.005, 0.03+ft*0.05);
+    if(!scene.background) scene.background=new THREE.Color(0,0,0);
+    scene.background.setRGB(ft*0.01, ft*0.003, ft*0.025);
     star.mass=0.01;
   }
 
@@ -2898,8 +3183,10 @@ function animate(){
 
   renderer.toneMappingExposure = baseExposure + flashIntensity * 5;
   flashIntensity = Math.max(0, flashIntensity - dt * 0.8);
-  
-  // HUD updates corrected physics values
+
+  // =========================================================================
+  // HUD updates — corrected physics values
+  // =========================================================================
   // FIX: Corrected phase names
   const names=['Main Sequence','Red Supergiant','Supernova','Neutron Star',
     'Black Hole (Kerr)','Relativistic Jets (BZ)','Consuming Planets',
@@ -2957,7 +3244,7 @@ function animate(){
   document.getElementById('tl-fill').style.width=`${Math.min(100, tE / totalDur * 100)}%`;
   document.querySelectorAll('#timeline .mrk').forEach((m,i)=>m.classList.toggle('active',i<=currentPhase));
 
-  // Lensing uniforms BH pass
+  // Lensing uniforms — BH pass
   if(pipeline.lensingMat){
     const bhWorld = new THREE.Vector3(0, -3, 0);
     const bhScreen = bhWorld.clone().project(camera);
