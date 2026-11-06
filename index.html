@@ -116,10 +116,6 @@
   .tg:hover{ color:var(--ink); border-color:var(--rule-strong); }
   .tg[aria-pressed="true"]{ color:var(--amber); border-color:rgba(255,181,71,0.55); background:var(--amber-dim); }
   :focus-visible{ outline:1px solid var(--amber); outline-offset:2px; }
-  #btn-sound .on{ display:none; } #btn-sound[aria-pressed="true"] .on{ display:inline; } #btn-sound[aria-pressed="true"] .off{ display:none; }
-  #btn-sound[aria-pressed="true"]{ color:var(--amber); border-color:rgba(255,181,71,0.55); }
-  #btn-sound.wait{ animation:pulseAmber 2.4s ease-in-out infinite; }
-  @keyframes pulseAmber{ 50%{ box-shadow:0 0 0 3px var(--amber-dim); } }
 
   /* timeline */
   #timeline{ min-width:0; }
@@ -215,9 +211,6 @@
     <button class="ib filled" id="btn-play" aria-label="Pause" title="Pause (Space)">
       <svg viewBox="0 0 16 16" id="ic-pause"><rect x="3.5" y="2.5" width="3" height="11" rx=".5"/><rect x="9.5" y="2.5" width="3" height="11" rx=".5"/></svg>
       <svg viewBox="0 0 16 16" id="ic-play" style="display:none"><path d="M4 2.5v11l9-5.5z"/></svg>
-    </button>
-    <button class="ib" id="btn-sound" aria-label="Play score" aria-pressed="false" title="Score (M)">
-      <svg viewBox="0 0 16 16"><path d="M2.5 6v4h2.5l3.5 3V3L5 6z"/><path class="on" d="M11 5.2a4 4 0 0 1 0 5.6M12.8 3.4a6.5 6.5 0 0 1 0 9.2"/><path class="off" d="M11 6l3.5 4M14.5 6L11 10"/></svg>
     </button>
     <button class="ib" id="btn-restart" aria-label="Restart" title="Restart (R)">
       <svg viewBox="0 0 16 16"><path d="M2.8 8a5.2 5.2 0 1 0 1.6-3.8"/><path d="M2.5 1.8v3h3"/></svg>
@@ -744,207 +737,6 @@ function buildSky(){
   return rt.texture;
 }
 
-// Generative score: string ensemble, formant choir, brass swells, celesta motifs, layered sound design
-const NOTE=n=>{ const m=/^([A-G])(#|b)?(-?\d)$/.exec(n); const k={C:0,D:2,E:4,F:5,G:7,A:9,B:11}[m[1]]+(m[2]==='#'?1:m[2]==='b'?-1:0); return 440*Math.pow(2,(k+(+m[3]+1)*12-69)/12); };
-// per phase: chord progression, string/choir/sub/wind levels, string brightness, choir vowel, celesta density
-const SCORE=[
-  {prog:[['D2','A2','F3','A3','E4','A4'],['Bb1','F2','D3','A3','D4','F4']], str:0.15, choir:0.00, sub:0.08, wind:0.00, cut:2200, vowel:'ah', bells:0.6},
-  {prog:[['Bb1','F2','D3','F3','C4','D4'],['G1','D2','Bb2','F3','A3','D4']], str:0.17, choir:0.05, sub:0.11, wind:0.01, cut:1700, vowel:'oh', bells:0.3},
-  {prog:[['C#2','G#2','E3','G3','A#3','C#4']], str:0.13, choir:0.00, sub:0.13, wind:0.03, cut:900, vowel:'oh', bells:0},
-  {prog:[['F2','C3','A3','E4','G4','C5'],['D2','A2','F3','C4','E4','A4']], str:0.16, choir:0.15, sub:0.07, wind:0.05, cut:2600, vowel:'ah', bells:0.8},
-  {prog:[['E2','B2','G3','B3','F#4','B4'],['C2','G2','E3','B3','D4','G4']], str:0.13, choir:0.06, sub:0.08, wind:0.03, cut:1800, vowel:'oo', bells:0.5},
-  {prog:[['C2','G2','Eb3','G3','D4','G4'],['Ab1','Eb2','C3','G3','Bb3','Eb4']], str:0.16, choir:0.09, sub:0.17, wind:0.02, cut:1100, vowel:'oh', bells:0},
-  {prog:[['C2','G2','Eb3','Bb3','D4','G4'],['F2','C3','Ab3','C4','Eb4','G4']], str:0.18, choir:0.10, sub:0.15, wind:0.03, cut:2400, vowel:'ah', bells:0.2},
-  {prog:[['Ab1','Eb2','C3','G3','Bb3','Eb4'],['F1','C2','Ab2','Eb3','G3','C4']], str:0.17, choir:0.07, sub:0.16, wind:0.03, cut:1500, vowel:'oh', bells:0.2},
-  {prog:[['E3','B3','F#4','G#4','B4','D#5'],['C#3','G#3','E4','B4','C#5','F#5']], str:0.10, choir:0.10, sub:0.02, wind:0.00, cut:2000, vowel:'oo', bells:0.4},
-  {prog:[['E3','B3','F#4','G#4','B4','D#5']], str:0.20, choir:0.14, sub:0.06, wind:0.06, cut:5000, vowel:'ah', bells:0},
-  {prog:[['A3','E4','B4','C#5','E5','A5']], str:0.05, choir:0.05, sub:0.00, wind:0.00, cut:1400, vowel:'oo', bells:0.15},
-];
-const VOWELS={ah:[800,1150,2900], oh:[450,800,2830], oo:[325,700,2530]};
-const Score={ ctx:null, on:false, ready:false, gestured:false, acc:0, lastP:-1, chordIdx:0, chordT:0, chord:null, bellT:3,
-  init(){
-    const C=window.AudioContext||window.webkitAudioContext; if(!C) return false;
-    const c=this.ctx=new C();
-    // mastering: high-pass, glue compression, brick-wall limiter
-    this.master=c.createGain(); this.master.gain.value=0;
-    const hp=c.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=24;
-    const glue=c.createDynamicsCompressor(); glue.threshold.value=-20; glue.ratio.value=2.5; glue.knee.value=8; glue.attack.value=0.03; glue.release.value=0.6;
-    const lim=c.createDynamicsCompressor(); lim.threshold.value=-4; lim.knee.value=0; lim.ratio.value=20; lim.attack.value=0.002; lim.release.value=0.2;
-    this.master.connect(hp); hp.connect(glue); glue.connect(lim); lim.connect(c.destination);
-    this.noise={white:this.noiseBuf('white'), pink:this.noiseBuf('pink'), brown:this.noiseBuf('brown')};
-    this.verb=c.createConvolver(); this.verb.buffer=this.hall(6.5);
-    const wet=c.createGain(); wet.gain.value=0.9; this.verb.connect(wet); wet.connect(this.master);
-    // music mix (ducked under explosions) and an effects bus
-    this.music=c.createGain(); this.music.gain.value=1.5; this.music.connect(this.master);
-    const send=c.createGain(); send.gain.value=0.55; this.music.connect(send); send.connect(this.verb);
-    this.fx=c.createGain(); this.fx.gain.value=0.45; this.fx.connect(this.master);
-    const fxs=c.createGain(); fxs.gain.value=0.7; this.fx.connect(fxs); fxs.connect(this.verb);
-    // strings section
-    this.strBus=c.createGain(); this.strF=c.createBiquadFilter(); this.strF.type='lowpass'; this.strF.frequency.value=2000; this.strF.Q.value=0.4;
-    this.strG=c.createGain(); this.strG.gain.value=0; this.strBus.connect(this.strF); this.strF.connect(this.strG); this.strG.connect(this.music);
-    const re=new Float32Array(40), im=new Float32Array(40);
-    for(let k=1;k<40;k++) im[k]=(1/k)*Math.exp(-k/16)*(k%2?1:0.75);
-    this.bowWave=c.createPeriodicWave(re,im);
-    // choir through a vowel formant bank
-    this.choirBus=c.createGain(); this.choirG=c.createGain(); this.choirG.gain.value=0;
-    this.form=VOWELS.ah.map((f,i)=>{ const b=c.createBiquadFilter(); b.type='bandpass'; b.frequency.value=f; b.Q.value=9; const g=c.createGain(); g.gain.value=[1,0.55,0.22][i]*3; this.choirBus.connect(b); b.connect(g); g.connect(this.choirG); return b; });
-    this.choirG.connect(this.music);
-    // sub and nebular wind
-    this.subO=c.createOscillator(); this.subO.type='sine'; this.subO.frequency.value=36; this.subG=c.createGain(); this.subG.gain.value=0; this.subO.connect(this.subG); this.subG.connect(this.music); this.subO.start();
-    const ws=c.createBufferSource(); ws.buffer=this.noise.pink; ws.loop=true;
-    this.windF=c.createBiquadFilter(); this.windF.type='bandpass'; this.windF.frequency.value=500; this.windF.Q.value=1.2;
-    this.windG=c.createGain(); this.windG.gain.value=0; ws.connect(this.windF); this.windF.connect(this.windG); this.windG.connect(this.music); ws.start();
-    const wl=c.createOscillator(); wl.frequency.value=0.05; const wlg=c.createGain(); wlg.gain.value=320; wl.connect(wlg); wlg.connect(this.windF.frequency); wl.start();
-    // saturation for the weight of explosions
-    this.sat=c.createWaveShaper(); const cv=new Float32Array(2048); for(let i=0;i<2048;i++){ const x=i/1024-1; cv[i]=Math.tanh(x*2.2)/Math.tanh(2.2); } this.sat.curve=cv; this.sat.oversample='4x';
-    this.sat.connect(this.fx);
-    this.ready=true; this.lastP=-1; this.chord=null;
-    return true;
-  },
-  noiseBuf(kind){
-    const c=this.ctx, n=c.sampleRate*4, b=c.createBuffer(2,n,c.sampleRate);
-    for(let ch=0;ch<2;ch++){ const d=b.getChannelData(ch); let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0,last=0;
-      for(let i=0;i<n;i++){ const w=Math.random()*2-1;
-        if(kind==='white') d[i]=w;
-        else if(kind==='pink'){ b0=0.99886*b0+w*0.0555179; b1=0.99332*b1+w*0.0750759; b2=0.969*b2+w*0.153852; b3=0.8665*b3+w*0.3104856; b4=0.55*b4+w*0.5329522; b5=-0.7616*b5-w*0.016898; d[i]=(b0+b1+b2+b3+b4+b5+b6+w*0.5362)*0.11; b6=w*0.115926; }
-        else { last=(last+0.02*w)/1.02; d[i]=last*3.5; } } }
-    return b;
-  },
-  hall(sec){ // stereo hall: early reflections then a tail that darkens as it decays
-    const c=this.ctx, n=Math.floor(c.sampleRate*sec), b=c.createBuffer(2,n,c.sampleRate);
-    for(let ch=0;ch<2;ch++){ const d=b.getChannelData(ch); let lp=0;
-      for(let i=0;i<n;i++){ const t=i/c.sampleRate; const a=Math.min(1,0.05+t*90);
-        lp+= (Math.random()*2-1-lp)*(0.95*Math.exp(-t*0.9)+0.04);
-        d[i]=lp*a*Math.exp(-t*(6.9/sec)); }
-      for(let r=0;r<14;r++){ const at=Math.floor((0.008+Math.random()*0.07)*c.sampleRate); d[at]+=(Math.random()*2-1)*0.6*(1-r/14); } }
-    return b;
-  },
-  setOn(v){
-    this.on=v;
-    if(v&&!this.ready){ if(!this.gestured){ this.mark(); return; } if(!this.init()) return; }
-    this.mark();
-    if(!this.ready) return;
-    const t=this.ctx.currentTime; this.master.gain.cancelScheduledValues(t); this.master.gain.setTargetAtTime(v?1.0:0,t,v?1.5:0.25);
-    if(v){ if(!isPaused) this.ctx.resume().then(()=>this.mark()); this.lastP=-1; }
-    setTimeout(()=>this.mark(),300);
-  },
-  unlock(){ this.gestured=true; if(!this.on) return; if(!this.ready){ this.setOn(true); return; } if(this.ctx.state!=='running'&&!isPaused) this.ctx.resume().then(()=>this.mark()); },
-  mark(){ const b=$('btn-sound'); if(!b) return; b.setAttribute('aria-pressed',String(this.on)); b.setAttribute('aria-label',this.on?'Mute score':'Play score'); b.classList.toggle('wait', this.on&&(!this.ctx||this.ctx.state!=='running')); },
-  suspend(p){ if(!this.ready) return; if(p) this.ctx.suspend(); else if(this.on) this.ctx.resume(); },
-  // a chord is a fresh set of players: it swells in while the previous one releases
-  playChord(notes,attack){
-    const c=this.ctx, t=c.currentTime, out=c.createGain(); out.gain.setValueAtTime(0,t); out.gain.linearRampToValueAtTime(1,t+attack);
-    const oscs=[];
-    notes.forEach((nm,i)=>{ const f=NOTE(nm);
-      const ng=c.createGain(); ng.gain.value=(i===0?0.8:1)/Math.sqrt(notes.length);
-      const pan=c.createStereoPanner?c.createStereoPanner():null;
-      if(pan){ pan.pan.value=(i/(notes.length-1)-0.5)*1.4; ng.connect(pan); pan.connect(out); } else ng.connect(out);
-      [-11,-4,4,11].forEach(dc=>{ const o=c.createOscillator(); o.setPeriodicWave(this.bowWave); o.frequency.value=f; o.detune.value=dc+(Math.random()-0.5)*4;
-        const vib=c.createOscillator(); vib.frequency.value=4.6+Math.random()*1.2; const vg=c.createGain(); vg.gain.value=3+Math.random()*2; vib.connect(vg); vg.connect(o.detune); vib.start(t);
-        const og=c.createGain(); og.gain.value=0.25; o.connect(og); og.connect(ng); o.start(t); oscs.push(o,vib); });
-      if(i>=2){ [-6,6].forEach(dc=>{ const o=c.createOscillator(); o.type='sawtooth'; o.frequency.value=f*(i>=4?1:2); o.detune.value=dc;
-        const og=c.createGain(); og.gain.value=0.12; o.connect(og); og.connect(this.choirBus); o.start(t); oscs.push(o); }); }
-    });
-    out.connect(this.strBus);
-    if(this.chord){ const old=this.chord; old.out.gain.cancelScheduledValues(t); old.out.gain.setValueAtTime(old.out.gain.value,t); old.out.gain.linearRampToValueAtTime(0,t+attack*1.3);
-      old.oscs.forEach(o=>{ try{ o.stop(t+attack*1.3+0.1); }catch(e){} }); }
-    this.chord={out,oscs,notes};
-    const root=NOTE(notes[0]); this.subO.frequency.setTargetAtTime(root>=55?root/2:root,t,1.2);
-  },
-  layers(m,tc){ const t=this.ctx.currentTime;
-    this.strG.gain.setTargetAtTime(m.str,t,tc); this.strF.frequency.setTargetAtTime(m.cut,t,tc);
-    this.choirG.gain.setTargetAtTime(m.choir*0.4,t,tc); this.subG.gain.setTargetAtTime(m.sub,t,tc); this.windG.gain.setTargetAtTime(m.wind,t,tc);
-    VOWELS[m.vowel].forEach((f,i)=>this.form[i].frequency.setTargetAtTime(f,t,2.5)); },
-  update(P,pP,dt){
-    if(!this.ready||!this.on||isPaused) return;
-    const sc0=SCORE[P]; let sc=Object.assign({},sc0), prog=sc0.prog, hold=9;
-    if(P===PH.sn&&sn.fired){ prog=[['D2','A2','D3','A3','E4','A4'],['Bb1','F2','D3','F3','A3','D4']]; Object.assign(sc,{str:0.19,choir:0.12,cut:3600,wind:0.06,vowel:'ah'}); hold=5; }
-    if(P===PH.rsg) sc.cut=lerp(1700,2400,pP);
-    if(P===PH.hawk){ const k=smooth(0,0.6,pP); sc.str=lerp(0.12,0.06,k); sc.choir=lerp(0.1,0.06,k);
-      if(pP>0.85){ const s2=smooth(0.85,1,pP); sc.str=lerp(0.06,0.22,s2); sc.choir=lerp(0.06,0.16,s2); sc.cut=lerp(2000,5200,s2); sc.wind=0.06*s2; } }
-    if(P===PH.die&&sn.dieFired){ sc=Object.assign({},SCORE[PH.dark],{str:0.04,choir:0.04}); prog=SCORE[PH.dark].prog; }
-    if(P===PH.dark){ sc.str=lerp(0.06,0.03,pP); sc.choir=lerp(0.06,0.03,pP); }
-    const changed=P!==this.lastP||prog!==this.prog;
-    if(changed){ this.lastP=P; this.prog=prog; this.chordIdx=0; this.chordT=0;
-      if(P===PH.ms||P===PH.rsg||P===PH.bh||P===PH.neb) this.brass(prog[0][0],5);
-      this.playChord(prog[0],P===PH.die&&sn.dieFired?6:3.5); }
-    this.chordT+=dt;
-    if(prog.length>1&&this.chordT>hold){ this.chordT=0; this.chordIdx=(this.chordIdx+1)%prog.length; this.playChord(prog[this.chordIdx],4); }
-    this.acc+=dt; if(this.acc>0.3){ this.acc=0; this.layers(sc,1.8); }
-    this.bellT-=dt;
-    if(sc.bells>0&&this.bellT<=0&&this.chord){ this.motif(this.chord.notes); this.bellT=(7+Math.random()*6)/sc.bells; }
-  },
-  motif(notes){ // celesta: a short phrase from the upper chord tones
-    const up=notes.slice(2).map(n=>NOTE(n)*2), c=this.ctx, n=3+Math.floor(Math.random()*3); let t=c.currentTime+0.1;
-    const dir=Math.random()<0.5?1:-1; let k=dir>0?0:up.length-1;
-    for(let i=0;i<n;i++){ this.bell(up[k],t,0.05+Math.random()*0.02); t+=0.38+Math.random()*0.5; k=Math.max(0,Math.min(up.length-1,k+dir*(1+Math.floor(Math.random()*2)))); }
-  },
-  bell(f,t,level){ const c=this.ctx;
-    const car=c.createOscillator(); car.frequency.value=f; const mod=c.createOscillator(); mod.frequency.value=f*3.5; const mi=c.createGain();
-    mi.gain.setValueAtTime(f*2.2,t); mi.gain.exponentialRampToValueAtTime(f*0.05,t+1.6); mod.connect(mi); mi.connect(car.frequency);
-    const g=c.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(level,t+0.004); g.gain.exponentialRampToValueAtTime(0.0001,t+3.2);
-    const p=c.createStereoPanner?c.createStereoPanner():null; car.connect(g); if(p){ p.pan.value=(Math.random()-0.5)*0.9; g.connect(p); p.connect(this.music); } else g.connect(this.music);
-    car.start(t); mod.start(t); car.stop(t+3.3); mod.stop(t+3.3); },
-  brass(note,dur){ // low horn section swell
-    const c=this.ctx, t=c.currentTime, f=NOTE(note); const fl=c.createBiquadFilter(); fl.type='lowpass'; fl.Q.value=1.2;
-    fl.frequency.setValueAtTime(180,t); fl.frequency.linearRampToValueAtTime(1500,t+dur*0.55); fl.frequency.linearRampToValueAtTime(400,t+dur);
-    const g=c.createGain(); g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(0.09,t+dur*0.5); g.gain.linearRampToValueAtTime(0,t+dur);
-    fl.connect(g); g.connect(this.music);
-    [1,1.5,2].forEach(r=>[-8,8].forEach(dc=>{ const o=c.createOscillator(); o.type='sawtooth'; o.frequency.value=f*r*(f<70?2:1); o.detune.value=dc; o.connect(fl); o.start(t); o.stop(t+dur+0.1); })); },
-  src(kind,t,dur,f0,f1,type,q,level,attack,decay,dest){ // filtered noise layer with an exponential envelope
-    const c=this.ctx, s=c.createBufferSource(); s.buffer=this.noise[kind]; s.loop=true;
-    const f=c.createBiquadFilter(); f.type=type; f.Q.value=q; f.frequency.setValueAtTime(f0,t); f.frequency.exponentialRampToValueAtTime(f1,t+dur);
-    const g=c.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(level,t+attack); g.gain.exponentialRampToValueAtTime(0.0001,t+attack+decay);
-    s.connect(f); f.connect(g); g.connect(dest||this.fx); s.start(t,Math.random()*3); s.stop(t+attack+decay+0.1); return g; },
-  tone(t,f0,f1,pitchT,level,decay,dest,type){ const c=this.ctx, o=c.createOscillator(); o.type=type||'sine';
-    o.frequency.setValueAtTime(f0,t); o.frequency.exponentialRampToValueAtTime(f1,t+pitchT);
-    const g=c.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(level,t+0.006); g.gain.exponentialRampToValueAtTime(0.0001,t+decay);
-    o.connect(g); g.connect(dest||this.fx); o.start(t); o.stop(t+decay+0.1); },
-  duck(depth,rec){ const t=this.ctx.currentTime, g=this.music.gain; g.cancelScheduledValues(t); g.setValueAtTime(g.value,t); g.linearRampToValueAtTime(depth,t+0.05); g.setTargetAtTime(1.5,t+0.4,rec/3); },
-  blast(scale){ // crack, saturated body, sub boom with pitch drop, rolling rumble, debris crackle
-    const c=this.ctx, t=c.currentTime+0.01;
-    this.duck(0.45,5);
-    this.src('white',t,0.25,9000,2500,'highpass',0.7,0.9*scale,0.002,0.18);
-    this.src('pink',t,3.0,5000,260,'lowpass',0.9,0.85*scale,0.01,3.2*scale,this.sat);
-    this.tone(t,92,30,1.4,1.0*scale,4.2*scale,this.sat);
-    this.tone(t,180,58,0.9,0.35*scale,2.2,this.sat,'triangle');
-    const rum=this.src('brown',t,9,220,70,'lowpass',0.6,0.9*scale,0.35,9.5*scale);
-    const am=c.createOscillator(); am.frequency.value=3.1; const amg=c.createGain(); amg.gain.value=0.25*scale; am.connect(amg); amg.connect(rum.gain); am.start(t); am.stop(t+10*scale);
-    for(let i=0;i<Math.round(46*scale);i++){ const dt=Math.pow(Math.random(),1.8)*4.5*scale;
-      const tt=t+0.15+dt, p=c.createStereoPanner?c.createStereoPanner():null, g=c.createGain();
-      const f=c.createBiquadFilter(); f.type='bandpass'; f.frequency.value=1200+Math.random()*4200; f.Q.value=2.5;
-      const s=c.createBufferSource(); s.buffer=this.noise.white; s.connect(f); f.connect(g);
-      const lv=0.25*(1-dt/(4.6*scale))*scale; g.gain.setValueAtTime(0.0001,tt); g.gain.exponentialRampToValueAtTime(Math.max(lv,0.002),tt+0.002); g.gain.exponentialRampToValueAtTime(0.0001,tt+0.03+Math.random()*0.07);
-      if(p){ p.pan.value=Math.random()*2-1; g.connect(p); p.connect(this.fx); } else g.connect(this.fx);
-      s.start(tt,Math.random()*3); s.stop(tt+0.12); }
-  },
-  riser(dur){ const c=this.ctx, t=c.currentTime; if(dur<0.3) return;
-    const s=c.createBufferSource(); s.buffer=this.noise.pink; s.loop=true;
-    const f=c.createBiquadFilter(); f.type='bandpass'; f.Q.value=1.4; f.frequency.setValueAtTime(250,t); f.frequency.exponentialRampToValueAtTime(7000,t+dur);
-    const g=c.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.32,t+dur); g.gain.setValueAtTime(0.0001,t+dur+0.01);
-    s.connect(f); f.connect(g); g.connect(this.fx); s.start(t); s.stop(t+dur+0.05);
-    const o=c.createOscillator(); o.type='sawtooth'; o.frequency.setValueAtTime(55,t); o.frequency.exponentialRampToValueAtTime(220,t+dur);
-    const of=c.createBiquadFilter(); of.type='lowpass'; of.frequency.value=900; const og=c.createGain(); og.gain.setValueAtTime(0.0001,t); og.gain.exponentialRampToValueAtTime(0.08,t+dur); og.gain.setValueAtTime(0.0001,t+dur+0.01);
-    o.connect(of); of.connect(og); og.connect(this.fx); o.start(t); o.stop(t+dur+0.05); },
-  timpani(note,level){ const c=this.ctx, t=c.currentTime, f=NOTE(note);
-    this.tone(t,f*1.08,f,0.12,level,2.8); this.tone(t,f*1.5*1.06,f*1.5,0.12,level*0.35,1.6);
-    this.src('pink',t,0.2,900,250,'bandpass',1.5,level*0.6,0.002,0.25); },
-  hit(type,arg){
-    if(!this.ready||!this.on||isPaused) return;
-    const c=this.ctx;
-    if(type==='riser') this.riser(arg);
-    else if(type==='breakout') this.blast(1.0);
-    else if(type==='collapse'){ this.duck(0.4,4); const t=c.currentTime;
-      this.src('brown',t,1.2,120,900,'lowpass',0.8,0.5,1.0,0.25);
-      this.tone(t+1.05,70,22,2.5,1.0,5.5,this.sat); this.src('pink',t+1.05,2.5,2200,90,'lowpass',0.8,0.45,0.01,3.5,this.sat); }
-    else if(type==='tear'){ const t=c.currentTime;
-      this.src('brown',t,2.4,180,1400,'bandpass',3.0,0.5,0.2,2.4); this.src('pink',t,2.0,600,3200,'bandpass',6.0,0.16,0.3,1.8);
-      this.tone(t,62,41,2.2,0.32,2.8,this.sat,'triangle'); }
-    else if(type==='feed'){ this.timpani(this.chord?this.chord.notes[0]:'C2',0.55); this.bell(NOTE('E6'),c.currentTime+0.05,0.03); }
-    else if(type==='tick'){ this.src('white',c.currentTime,0.03,7000,4000,'highpass',0.8,0.03,0.001,0.025); }
-    else if(type==='burst'){ this.blast(1.35); }
-  },
-};
 
 // Simulation state
 let simTime=0, speedMul=1, isPaused=false;
@@ -1372,21 +1164,18 @@ function init(){
   vis.forEach(([o,v])=>{ o.visible=v; });
   [pipe.nebMat,pipe.plainMat,pipe.lensMat,pipe.brightMat,pipe.blurH,pipe.blurV,pipe.finalMat].forEach(m=>{ pipe.quad.material=m; renderer.compile(pipe.quadScene,pipe.quadCam); });
   let frames=0;
-  const boot=()=>{ frames++; animate(true); if(frames<3) requestAnimationFrame(boot); else { $('loader').classList.add('out'); Score.setOn(true); requestAnimationFrame(loop); } };
+  const boot=()=>{ frames++; animate(true); if(frames<3) requestAnimationFrame(boot); else { $('loader').classList.add('out'); requestAnimationFrame(loop); } };
   requestAnimationFrame(boot);
 }
 
 // Events
-function setPaused(p){ isPaused=p; Score.suspend(p); $('ic-pause').style.display=p?'none':''; $('ic-play').style.display=p?'':'none';
+function setPaused(p){ isPaused=p; $('ic-pause').style.display=p?'none':''; $('ic-play').style.display=p?'':'none';
   $('btn-play').setAttribute('aria-label',p?'Play':'Pause'); $('btn-play').title=p?'Play (Space)':'Pause (Space)'; }
 function setLayer(k,v){ show[k]=v; const b=document.querySelector(`[data-layer="${k}"]`); if(b) b.setAttribute('aria-pressed',String(v)); }
 function hookEvents(){
   addEventListener('resize',onResize);
   $('btn-play').addEventListener('click',()=>setPaused(!isPaused));
   $('btn-restart').addEventListener('click',()=>skipToPhase(0));
-  $('btn-sound').addEventListener('click',()=>{ Score.gestured=true; Score.setOn(!Score.on); });
-  const unlock=e=>{ if(e.target&&e.target.closest&&e.target.closest('#btn-sound')) return; Score.unlock(); };
-  ['pointerdown','keydown','touchstart'].forEach(ev=>addEventListener(ev,unlock,{capture:true,passive:true}));
   document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',()=>{ speedMul=parseFloat(b.dataset.speed);
     document.querySelectorAll('.seg button').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); }));
   document.querySelectorAll('[data-layer]').forEach(b=>b.addEventListener('click',()=>setLayer(b.dataset.layer,!show[b.dataset.layer])));
@@ -1414,10 +1203,9 @@ function hookEvents(){
     else if(k==='g') setLayer('fabric',!show.fabric);
     else if(k==='o') setLayer('orbits',!show.orbits);
     else if(k==='p') setLayer('photons',!show.photons);
-    else if(k==='m'){ Score.gestured=true; Score.setOn(!Score.on); }
     else if(/^[0-9]$/.test(k)) skipToPhase(parseInt(k));
   });
-  document.addEventListener('visibilitychange',()=>{ if(!document.hidden) clock.getDelta(); Score.suspend(document.hidden||isPaused); });
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden) clock.getDelta(); });
 }
 function fitFov(){ const a=innerWidth/innerHeight; camera.fov = a<1 ? Math.min(78, 2*Math.atan(Math.tan(THREE.MathUtils.degToRad(21))/a)*180/Math.PI) : 46; }
 function onResize(){
@@ -1435,10 +1223,9 @@ function resetPlanets(){
     const u=p.mat.uniforms; u.uStretch.value=0; u.uHeat.value=0; u.uDissolve.value=0; p.debris.visible=false; });
 }
 function resetAll(){ simTime=0; phase=0; phaseTime=0; resetPlanets(); pipe.flash=0; pipe.exposure=0.9; shake=0; }
-function resetEvents(){ sn.fired=false; sn.bhFired=false; sn.dieFired=false; sn.riser=false; sn.hawkRiser=false; }
+function resetEvents(){ sn.fired=false; }
 function skipToPhase(i){
-  phase=i; phaseTime=0; resetPlanets(); resetEvents(); if(i>=PH.die) sn.dieFired=false;
-  if(i>PH.sn){ sn.fired=true; } if(i>PH.bh) sn.bhFired=true;
+  phase=i; phaseTime=0; resetPlanets(); resetEvents(); if(i>PH.sn) sn.fired=true;
   if(i>=PH.sn) consumePlanet(0,'engulfed',true);
   if(i>=PH.hawk) planets.forEach((p,k)=>{ if(p.state==='ok') consumePlanet(k,'consumed',true); });
   pipe.flash=0; showCaption(i);
@@ -1453,7 +1240,7 @@ const smooth=(a,b,x)=>{ const t=Math.max(0,Math.min(1,(x-a)/(b-a))); return t*t*
 const lerp=(a,b,t)=>a+(b-a)*t;
 const lerpLog=(a,b,t)=>Math.exp(Math.log(a)+(Math.log(b)-Math.log(a))*t);
 
-const sn={fired:false,bhFired:false,dieFired:false,riser:false,hawkRiser:false};
+const sn={fired:false};
 function pulsar(dt,period,amp){
   const u=nsGroup.userData;
   u.beamAngle=(u.beamAngle||0)+dt*2*Math.PI/period*0.012;
@@ -1463,7 +1250,6 @@ function pulsar(dt,period,amp){
   u.beamMats.forEach(m=>{ m.uniforms.uA.value=(0.22+pulse*0.8)*amp; m.uniforms.uTime.value=simTime; });
   u.fieldMats.forEach(m=>{ m.uniforms.uA.value=0.55*amp; m.uniforms.uTime.value=simTime; });
   u.core.material.uniforms.uBright.value=5.5*(1+pulse*1.5); u.core.material.uniforms.uTime.value=simTime;
-  if(pulse>0.5 && !u.ticked){ u.ticked=true; Score.hit('tick'); } else if(pulse<0.2) u.ticked=false;
   return pulse;
 }
 let camTarget={dist:70,pitch:0.3}, expoTarget=0.9, starLum=1;
@@ -1501,9 +1287,8 @@ function updatePhase(dt){
       st.visible=true; st.R=8.2+Math.sin(phaseTime*40)*0.01*phaseTime; st.Teff=3550; st.cell=2.6; st.contrast=0.16; st.disp=0.07; st.alpha=1; st.bright=1.15; st.coronaOp=0.7;
       hud.tempLabel='T<sub>core</sub>'; hud.temp=`${sci(lerpLog(3.5e9,1e11,phaseTime/tB))} K`; hud.epoch=`+${Math.round(phaseTime/tB*400)} ms`; hud.size='core 1.5×10³ km → 30 km';
       light=6; expoTarget=0.62; sn.fired=false;
-      if(!sn.riser){ sn.riser=true; Score.hit('riser',tB-phaseTime); }
     } else {
-      if(!sn.fired){ sn.fired=true; Score.hit('breakout'); }
+      sn.fired=true;
       if(snT<0.05){ pipe.flash=Math.max(pipe.flash,2.4); pipe.flashCol.set(0.75,0.82,1.0); shake=Math.max(shake,1); }
       const R=shellR(snT), Tph=5600+180000*Math.exp(-snT*1.7);
       st.visible=snT<8.5; st.R=R; st.Teff=Tph; st.cell=1.7; st.contrast=0.22; st.disp=0.05; st.flow=0.12; st.coronaOp=0.9;
@@ -1543,7 +1328,6 @@ function updatePhase(dt){
     if(pP>=1) advance();
   } else if(P===PH.bh){ // collapse to a Kerr hole, fallback accretion
     const t=ease(pP);
-    if(!sn.bhFired){ sn.bhFired=true; Score.hit('collapse'); }
     const Msun=lerp(PHYS.TOV_LIMIT,PHYS.M_BH,smooth(0,0.7,pP)); bh.M=Msun/PHYS.M_BH; bh.spin=PHYS.SPIN;
     bh.disk=smooth(0.08,0.55,pP); bh.diskOut=lerp(5,15,smooth(0.05,0.8,pP));
     const snT=SN_END+PHASE_DUR[PH.neb]+PHASE_DUR[PH.ns]+phaseTime;
@@ -1587,14 +1371,12 @@ function updatePhase(dt){
     hud.epoch=`τ<sub>left</sub> ≈ 10${sup((Math.log10(PHYS.T_EVAP_10MSUN_YR)-60*x).toFixed(1))} yr`;
     hud.spin=`a/M = ${a.toFixed(3)}`; hud.z='n/a';
     light=1.6*bh.disk; lightC=bbColor(9000);
-    if(x>0.955&&!sn.hawkRiser){ sn.hawkRiser=true; Score.hit('riser',(1-x)*PHASE_DUR[PH.hawk]+0.22); }
     if(x>0.92){ pipe.flash=Math.max(pipe.flash,(x-0.92)/0.08*0.5); pipe.flashCol.set(0.8,0.86,1); }
     camTarget={dist:lerp(46,22,smooth(0.2,0.95,x)),pitch:0.18}; expoTarget=lerp(0.9,1.3,smooth(0.1,0.5,x));
     if(pP>=1) advance();
   } else if(P===PH.die){ // final burst
     skyFade=0; const t=phaseTime;
     if(t<0.25){ bh.M=0; bh.hawkT=1e12; bh.glow=3+t*30; } else { bh.glow=Math.max(0,3*(1-(t-0.25)*3)); bh.hawkT=1e12; }
-    if(t>0.22&&!sn.dieFired){ sn.dieFired=true; Score.hit('burst'); }
     if(t>0.22&&t<0.3){ pipe.flash=Math.max(pipe.flash,3.2); pipe.flashCol.set(0.8,0.88,1); shake=Math.max(shake,1.2); }
     const tt=Math.max(0,t-0.25);
     explPts.visible=t>0.25; explPts.material.uniforms.uTime.value=tt; explPts.material.uniforms.uAlpha.value=1-smooth(0,PHASE_DUR[PH.die],tt)*0.4;
@@ -1612,7 +1394,6 @@ function updatePhase(dt){
     if(pP>=1) advance();
   }
   const nu=pipe.lensMat.uniforms; nu.uNebR.value=neb.R; nu.uNebInt.value=neb.int; nu.uNebDust.value=neb.dust; nu.uNebPWN.value=neb.pwn;
-  Score.update(P,pP,dt);
 
   // apply star uniforms
   starMesh.visible=coronaMesh.visible=st.visible;
@@ -1667,13 +1448,13 @@ function updatePlanets(dt){
       p.inspiralT+=dt; const tau=4.2;
       p.orbit=roche+(p.r0-roche)*Math.pow(Math.max(0,1-p.inspiralT/tau),0.25);
       stretch=0.3*smooth(roche*1.8,roche,p.orbit);
-      if(p.inspiralT>=tau){ p.state='shred'; p.shredT=0; p.orbit=roche; p.shredAngle=p.angle; Score.hit('tear'); }
+      if(p.inspiralT>=tau){ p.state='shred'; p.shredT=0; p.orbit=roche; p.shredAngle=p.angle; }
     }
     if(p.state==='shred'){ // tidal disruption: body torn, debris sheared into a stream that falls back as t^-5/3
       p.shredT+=dt; const s=p.shredT;
       stretch=smooth(0,1.3,s); heat=smooth(0.2,1.6,s); dissolve=smooth(0.7,2.1,s);
       const tr=1.4; p.flash=s>tr?Math.min(1.3,1.3*Math.pow(s/tr,-5/3)):0;
-      if(s>tr&&!p.thud){ p.thud=true; Score.hit('feed'); pipe.flash=Math.max(pipe.flash,0.3); pipe.flashCol.set(1,0.9,0.8); }
+      if(s>tr&&!p.thud){ p.thud=true; pipe.flash=Math.max(pipe.flash,0.3); pipe.flashCol.set(1,0.9,0.8); }
       const du=p.debrisMat.uniforms; p.debris.visible=true;
       du.uTD.value=s; du.uRt.value=roche; du.uTheta0.value=p.shredAngle; du.uRin.value=rin; du.uK.value=K;
       du.uAlpha.value=smooth(0,0.4,s)*(1-smooth(9,11,s)); du.uLight.value.copy(lightCol); du.uTime.value=simTime;

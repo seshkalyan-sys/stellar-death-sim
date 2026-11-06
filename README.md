@@ -25,7 +25,6 @@ Everything is in one self-contained `index.html` (Three.js r128 from cdnjs, cust
 | **Jets** | Spine/sheath synchrotron jets with relativistic beaming `D^(2+α)`, `D = [Γ(1 − β cos θ)]⁻¹`. The jet pointing at you is boosted, and the counter-jet fades. |
 | **Planets** | Lit by whatever is at the centre (star, fireball, disk). Mercury is engulfed by the supergiant. In the accretion phase each planet decays inward with `r ∝ (t_c − t)^¼` until it reaches its tidal radius, where it is stretched radially and torn apart. Every debris particle keeps its own orbital energy, so Keplerian shear smears the planet into a long stream: the bound half falls back and heats from dull red to white as it nears the ISCO, the unbound tail escapes, and the disk flares with the classic `t^-5/3` fallback rate. |
 | **Hawking evaporation** | Mass falls logarithmically from 10 M☉ to 10⁻¹⁹ M☉ while `T_H = ħc³/8πGMk_B` (with the Kerr factor while spin decays) climbs from nanokelvin to 10¹² K. The stars burn out first; the hole then glows red → white → blue as a shrinking ember before the final burst. |
-| **Score** | A generative cinematic score synthesised live with the Web Audio API: a six-voice pad re-voiced for every phase with slow chord glides, sub bass, high shimmer and nebular wind through a long convolution reverb, plus sound for shock breakout, collapse, each tidal disruption, the pulsar's lighthouse ticks and the final burst. It plays continuously from the first star to the dark era and into the next cycle. |
 
 ### Honest approximations
 
@@ -47,10 +46,9 @@ Everything is in one self-contained `index.html` (Three.js r128 from cdnjs, cust
 | `R` | Restart |
 | `L` | Toggle gravitational lensing (compare with straight-line rays) |
 | `B` | Toggle optical bloom |
-| `M` | Mute or unmute the score |
 | `G` / `O` / `P` | Spacetime embedding grid / orbit paths / photon paths (diagram layers, off by default) |
 
-The score is on by default; browsers only allow audio after the first click, tap or key press, so it starts then. Playback speed is 0.5× to 4×. The simulation loops after the dark era. Resolution adapts automatically to keep the frame rate up.
+Playback speed is 0.5× to 4×. The simulation loops after the dark era. Resolution adapts automatically to keep the frame rate up.
 
 ## Running locally
 
