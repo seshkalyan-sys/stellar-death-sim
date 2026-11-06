@@ -1,6 +1,6 @@
-# Stellar Death — Relativistic Simulation
+# Stellar Death: Relativistic Simulation
 
-A real-time WebGL film of a massive star's entire death: main sequence → red supergiant → core-collapse supernova → neutron star → **ray-traced Kerr black hole** → relativistic jets → tidal disruption of its planets → 10⁷⁰ years of Hawking evaporation → the final burst → the dark era.
+A real-time WebGL film of a massive star's entire death: main sequence → red supergiant → core-collapse supernova → supernova-remnant nebula → neutron star → **ray-traced Kerr black hole** → relativistic jets → tidal disruption of its planets → 10⁷⁰ years of Hawking evaporation → the final burst → the dark era.
 
 **Live:** https://seshkalyan-sys.github.io/stellar-death-sim/
 
@@ -19,11 +19,13 @@ Everything is in one self-contained `index.html` (Three.js r128 from cdnjs, cust
 | **Colour** | All thermal colours (stars, photosphere, disk, Hawking glow, starfield) come from the Planck function integrated against the CIE 1931 colour-matching functions (Wyman–Sloan–Shirley fit) → linear sRGB. Nothing is hand-picked. |
 | **Photosphere** | Worley-cell granulation and an Eddington grey-atmosphere limb, `T(μ) = T_eff[¾(μ + ⅔)]^¼`, which gives limb darkening *and* limb reddening for free. The O star has a radiative envelope (low contrast); the red supergiant has a handful of giant convection cells. |
 | **Supernova** | The iron core collapses invisibly. Shock breakout produces a UV flash, then a fireball photosphere expands and cools from ~10⁵ K toward the 5,600 K recombination plateau and becomes optically thin, revealing a remnant of Rayleigh–Taylor filaments glowing in Hα, [O III] and [S II]. |
+| **Nebula** | A new phase after the explosion. The remnant is ray-marched as a true volume: a turbulent, Rayleigh-Taylor-fingered shell whose ionisation structure puts teal [O III] inside and red Hα with orange [S II] at the shocked rim, cold dust lanes that absorb the light and stars behind them, and a blue synchrotron pulsar-wind nebula at the centre. The camera pulls back to frame it, then dives in to the neutron star. |
 | **Sky** | 42,000 stars with a realistic spectral-class mix and luminosity function, plus a procedural Milky Way with bulge, dust lanes and HII regions, baked into an HDR cube map. Stars do not twinkle in vacuum. |
 | **Camera** | HDR (half-float) pipeline → constant optical PSF (multi-scale bloom) → eye-adaptation exposure → ACES filmic tone mapping → sRGB, with dithering. Flashes are glare in the optics, not exposure hacks. |
 | **Jets** | Spine/sheath synchrotron jets with relativistic beaming `D^(2+α)`, `D = [Γ(1 − β cos θ)]⁻¹`. The jet pointing at you is boosted, and the counter-jet fades. |
-| **Planets** | Lit by whatever is at the centre (star, fireball, disk). Mercury is engulfed by the supergiant. In the accretion phase, planets inspiral with `r ∝ (t_c − t)^¼`, are spaghettified inside their Roche limit and feed a tidal stream into the disk. |
+| **Planets** | Lit by whatever is at the centre (star, fireball, disk). Mercury is engulfed by the supergiant. In the accretion phase each planet decays inward with `r ∝ (t_c − t)^¼` until it reaches its tidal radius, where it is stretched radially and torn apart. Every debris particle keeps its own orbital energy, so Keplerian shear smears the planet into a long stream: the bound half falls back and heats from dull red to white as it nears the ISCO, the unbound tail escapes, and the disk flares with the classic `t^-5/3` fallback rate. |
 | **Hawking evaporation** | Mass falls logarithmically from 10 M☉ to 10⁻¹⁹ M☉ while `T_H = ħc³/8πGMk_B` (with the Kerr factor while spin decays) climbs from nanokelvin to 10¹² K. The stars burn out first; the hole then glows red → white → blue as a shrinking ember before the final burst. |
+| **Score** | A generative cinematic score synthesised live with the Web Audio API: a six-voice pad re-voiced for every phase with slow chord glides, sub bass, high shimmer and nebular wind through a long convolution reverb, plus sound for shock breakout, collapse, each tidal disruption, the pulsar's lighthouse ticks and the final burst. It plays continuously from the first star to the dark era and into the next cycle. |
 
 ### Honest approximations
 
@@ -45,9 +47,10 @@ Everything is in one self-contained `index.html` (Three.js r128 from cdnjs, cust
 | `R` | Restart |
 | `L` | Toggle gravitational lensing (compare with straight-line rays) |
 | `B` | Toggle optical bloom |
+| `M` | Mute or unmute the score |
 | `G` / `O` / `P` | Spacetime embedding grid / orbit paths / photon paths (diagram layers, off by default) |
 
-Playback speed is 0.5× to 4×. The simulation loops after the dark era. Resolution adapts automatically to keep the frame rate up.
+The score is on by default; browsers only allow audio after the first click, tap or key press, so it starts then. Playback speed is 0.5× to 4×. The simulation loops after the dark era. Resolution adapts automatically to keep the frame rate up.
 
 ## Running locally
 

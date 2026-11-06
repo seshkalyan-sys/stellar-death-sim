@@ -3,20 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Stellar Death — Relativistic Simulation</title>
+<title>Stellar Death: Relativistic Simulation</title>
 <meta name="theme-color" content="#000000">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Ccircle cx=%2216%22 cy=%2216%22 r=%2215%22 fill=%22%23000%22/%3E%3Cellipse cx=%2216%22 cy=%2216%22 rx=%2214%22 ry=%224%22 fill=%22none%22 stroke=%22%23ffb547%22 stroke-width=%222%22/%3E%3Ccircle cx=%2216%22 cy=%2216%22 r=%226%22 fill=%22%23000%22 stroke=%22%23fff%22 stroke-width=%221%22/%3E%3C/svg%3E">
 
-<!-- Open Graph — LinkedIn / Facebook rich preview -->
+<!-- Open Graph, LinkedIn / Facebook rich preview -->
 <meta property="og:type"        content="website">
 <meta property="og:url"         content="https://seshkalyan-sys.github.io/stellar-death-sim/">
-<meta property="og:title"       content="Stellar Death — Relativistic Simulation">
+<meta property="og:title"       content="Stellar Death: Relativistic Simulation">
 <meta property="og:description" content="A 25 solar-mass star lives, explodes, collapses into a ray-traced Kerr black hole, devours its planets and finally evaporates through Hawking radiation. Real physics, rendered in real time.">
 <meta property="og:image"       content="https://seshkalyan-sys.github.io/stellar-death-sim/preview.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card"        content="summary_large_image">
-<meta name="twitter:title"       content="Stellar Death — Relativistic Simulation">
+<meta name="twitter:title"       content="Stellar Death: Relativistic Simulation">
 <meta name="twitter:description" content="A star's entire death, from main sequence to Hawking evaporation, with a ray-traced black hole. Built with physics and a conversation with Claude.">
 <meta name="twitter:image"       content="https://seshkalyan-sys.github.io/stellar-death-sim/preview.png">
 <meta name="description" content="A 25 solar-mass star lives, explodes, collapses into a ray-traced Kerr black hole, devours its planets and finally evaporates through Hawking radiation. Real physics, rendered in real time.">
@@ -56,22 +56,20 @@
   .scrim.top{ top:0; height:180px; background:linear-gradient(to bottom, rgba(0,0,0,0.55), rgba(0,0,0,0)); }
   .scrim.bot{ bottom:0; height:200px; background:linear-gradient(to top, rgba(0,0,0,0.62), rgba(0,0,0,0)); }
 
-  /* frame — instrument field-of-view marks */
+  /* frame, instrument field-of-view marks */
   #frame{ position:fixed; inset:var(--gut); pointer-events:none; z-index:6; }
   #frame i{ position:absolute; width:18px; height:18px; border-color:var(--rule-strong); border-style:solid; border-width:0; }
   #frame i:nth-child(1){ top:0; left:0; border-top-width:1px; border-left-width:1px; }
   #frame i:nth-child(2){ top:0; right:0; border-top-width:1px; border-right-width:1px; }
   #frame i:nth-child(3){ bottom:0; left:0; border-bottom-width:1px; border-left-width:1px; }
   #frame i:nth-child(4){ bottom:0; right:0; border-bottom-width:1px; border-right-width:1px; }
-  #reticle{ position:fixed; left:50%; top:50%; width:40px; height:40px; margin:-20px 0 0 -20px; pointer-events:none; z-index:6; opacity:0.35; transition:opacity .8s; }
-  #reticle.hide{ opacity:0; }
 
   /* identity */
   #ident{ top:calc(var(--gut) + 14px); left:calc(var(--gut) + 18px); }
   #ident .name{ font-weight:500; font-size:13px; letter-spacing:0.32em; text-transform:uppercase; }
   #ident .desig{ margin-top:5px; font-size:12px; color:var(--ink-3); letter-spacing:0.02em; }
 
-  /* caption — the one authored motion moment */
+  /* caption, the one authored motion moment */
   #caption{ left:calc(var(--gut) + 18px); top:calc(var(--gut) + 64px); max-width:min(560px, 62vw); }
   #caption h1{ font-weight:300; font-size:clamp(30px, 4.4vw, 58px); line-height:1.02; letter-spacing:-0.015em; }
   #caption p{ margin-top:10px; font-size:clamp(13px, 1.15vw, 15px); line-height:1.45; color:var(--ink-2); max-width:52ch; }
@@ -118,6 +116,10 @@
   .tg:hover{ color:var(--ink); border-color:var(--rule-strong); }
   .tg[aria-pressed="true"]{ color:var(--amber); border-color:rgba(255,181,71,0.55); background:var(--amber-dim); }
   :focus-visible{ outline:1px solid var(--amber); outline-offset:2px; }
+  #btn-sound .on{ display:none; } #btn-sound[aria-pressed="true"] .on{ display:inline; } #btn-sound[aria-pressed="true"] .off{ display:none; }
+  #btn-sound[aria-pressed="true"]{ color:var(--amber); border-color:rgba(255,181,71,0.55); }
+  #btn-sound.wait{ animation:pulseAmber 2.4s ease-in-out infinite; }
+  @keyframes pulseAmber{ 50%{ box-shadow:0 0 0 3px var(--amber-dim); } }
 
   /* timeline */
   #timeline{ min-width:0; }
@@ -193,12 +195,12 @@
 <aside id="telemetry" class="hud" aria-label="Telemetry">
   <dl>
     <dt>Phase</dt><dd id="v-phase">Main sequence</dd>
-    <dt>Epoch</dt><dd class="num" id="v-epoch">—</dd>
+    <dt>Epoch</dt><dd class="num" id="v-epoch">n/a</dd>
     <dt>Mass</dt><dd class="num" id="v-mass">25.0 M☉</dd>
-    <dt id="l-temp">T<sub>eff</sub></dt><dd class="num" id="v-temp">—</dd>
-    <dt class="opt2" id="l-size">Radius</dt><dd class="num opt2" id="v-size">—</dd>
-    <dt class="opt">Spin a/M</dt><dd class="num opt" id="v-spin">—</dd>
-    <dt class="opt">Redshift</dt><dd class="num opt" id="v-z">—</dd>
+    <dt id="l-temp">T<sub>eff</sub></dt><dd class="num" id="v-temp">n/a</dd>
+    <dt class="opt2" id="l-size">Radius</dt><dd class="num opt2" id="v-size">n/a</dd>
+    <dt class="opt">Spin a/M</dt><dd class="num opt" id="v-spin">n/a</dd>
+    <dt class="opt">Redshift</dt><dd class="num opt" id="v-z">n/a</dd>
     <dt class="opt">Bodies</dt><dd class="num opt" id="v-bodies">8 / 8</dd>
   </dl>
   <div id="eqs"></div>
@@ -213,6 +215,9 @@
     <button class="ib filled" id="btn-play" aria-label="Pause" title="Pause (Space)">
       <svg viewBox="0 0 16 16" id="ic-pause"><rect x="3.5" y="2.5" width="3" height="11" rx=".5"/><rect x="9.5" y="2.5" width="3" height="11" rx=".5"/></svg>
       <svg viewBox="0 0 16 16" id="ic-play" style="display:none"><path d="M4 2.5v11l9-5.5z"/></svg>
+    </button>
+    <button class="ib" id="btn-sound" aria-label="Play score" aria-pressed="false" title="Score (M)">
+      <svg viewBox="0 0 16 16"><path d="M2.5 6v4h2.5l3.5 3V3L5 6z"/><path class="on" d="M11 5.2a4 4 0 0 1 0 5.6M12.8 3.4a6.5 6.5 0 0 1 0 9.2"/><path class="off" d="M11 6l3.5 4M14.5 6L11 10"/></svg>
     </button>
     <button class="ib" id="btn-restart" aria-label="Restart" title="Restart (R)">
       <svg viewBox="0 0 16 16"><path d="M2.8 8a5.2 5.2 0 1 0 1.6-3.8"/><path d="M2.5 1.8v3h3"/></svg>
@@ -237,19 +242,13 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 'use strict';
-// ============================================================================
-// ENVIRONMENT
-// ============================================================================
+// Environment
 const IS_MOBILE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
                   (matchMedia('(pointer:coarse)').matches && Math.min(innerWidth, innerHeight) < 820);
-const QUALITY = IS_MOBILE ? { steps:110, stepK:0.075, stars:22000, cube:1024, pr:1.25 }
-                          : { steps:240, stepK:0.045, stars:42000, cube:1536, pr:1.5 };
+const QUALITY = IS_MOBILE ? { steps:110, stepK:0.075, neb:22, stars:22000, cube:1024, pr:1.25 }
+                          : { steps:240, stepK:0.045, neb:60, stars:42000, cube:1536, pr:1.5 };
 
-// ============================================================================
-// BLACKBODY — Planck spectrum integrated against CIE 1931 colour matching
-// functions (Wyman, Sloan & Shirley 2013 multi-lobe fit) → linear sRGB.
-// Shared by JS (star light, HUD) and GLSL (disk, photosphere, Hawking glow).
-// ============================================================================
+// Blackbody colour: Planck spectrum integrated against CIE 1931 matching functions
 function cmfG(x,mu,s1,s2){ const t=(x-mu)/(x<mu?s1:s2); return Math.exp(-0.5*t*t); }
 function planckXYZ(T){
   let X=0,Y=0,Z=0;
@@ -295,9 +294,7 @@ vec3 planckRGB(float T){
 float lum(vec3 c){ return dot(c,vec3(0.2126,0.7152,0.0722)); }
 `;
 
-// ============================================================================
-// NOISE (Ashima simplex) + FBM
-// ============================================================================
+// Simplex noise and fBm
 const NOISE_GLSL = `
 vec3 mod289(vec3 x){return x-floor(x*(1.0/289.0))*289.0;}
 vec4 mod289(vec4 x){return x-floor(x*(1.0/289.0))*289.0;}
@@ -327,10 +324,7 @@ float fbm3(vec3 p){ float v=0.0,a=0.5; for(int i=0;i<3;i++){ v+=a*snoise(p); p=p
 float turbulence(vec3 p){ float v=0.0,a=0.5; for(int i=0;i<5;i++){ v+=a*abs(snoise(p)); p=p*2.0+vec3(100.0); a*=0.5; } return v; }
 `;
 
-// ============================================================================
-// PHYSICAL CONSTANTS  (geometrised units G = c = 1; lengths in M = GM/c²)
-// Simulation length unit: 1 unit = 1 M of the 10 M☉ black hole = 14.77 km
-// ============================================================================
+// Physical constants, geometrised units (G = c = 1, lengths in M)
 const PHYS = {
   M_PROGENITOR:25, M_BH:10, SPIN:0.7, NS_MASS:1.8, NS_RADIUS_KM:12, TOV_LIMIT:2.25,
   KM_PER_MSUN:1.4766,           // GM☉/c²
@@ -350,7 +344,7 @@ function horizon(a){ return 1+Math.sqrt(1-a*a); }
 function kerrTempFactor(a){ const s=Math.sqrt(1-a*a); return 2*s/(1+s); }
 function iscoRedshift(a){ const r=iscoKerr(a), r15=Math.pow(r,1.5); return (r15+a)/(Math.pow(r,0.75)*Math.sqrt(r15-3*Math.sqrt(r)+2*a))-1; }
 
-// ---------- number formatting ----------
+// Number formatting
 const SUP={'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','-':'⁻','.':'·'};
 const sup = s => String(s).split('').map(c=>SUP[c]||c).join('');
 function sci(v,d=1){
@@ -362,12 +356,12 @@ function sci(v,d=1){
   return `${m.toFixed(d)}×10${sup(e)}`;
 }
 
-// ============================================================================
-// RENDERER + PIPELINE
-// ============================================================================
+// Renderer + pipeline
 let renderer, scene, camera, clock, pipe, skyTex;
 let HDR_TYPE = THREE.UnsignedByteType, IS_WEBGL2=false;
-let pixelRatio = Math.min(devicePixelRatio||1, QUALITY.pr);
+const PIXEL_BUDGET = IS_MOBILE ? 1.1e6 : 2.4e6;
+const maxPR = ()=>Math.max(0.5,Math.min(devicePixelRatio||1, QUALITY.pr, Math.sqrt(PIXEL_BUDGET/(innerWidth*innerHeight))));
+let pixelRatio = maxPR();
 const LAYER_MAIN=0, LAYER_OVERLAY=2;
 
 const QUAD_VS = `varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.0,1.0); }`;
@@ -442,7 +436,7 @@ class Pipeline {
         }`});
   }
   initLens(){
-    const D = `#define MAX_STEPS ${QUALITY.steps}\n#define STEP_K ${QUALITY.stepK.toFixed(3)}\n`;
+    const D = `#define MAX_STEPS ${QUALITY.steps}\n#define STEP_K ${QUALITY.stepK.toFixed(3)}\n#define NEB_STEPS ${QUALITY.neb}\n`;
     this.lensMat=new THREE.ShaderMaterial({
       uniforms:{
         tScene:{value:this.sceneRT.texture}, tDepth:{value:this.sceneRT.depthTexture}, tSky:{value:skyTex},
@@ -452,6 +446,7 @@ class Pipeline {
         uM:{value:0}, uSpin:{value:0.7}, uBend:{value:1}, uRH:{value:2},
         uDiskOpacity:{value:0}, uDiskIn:{value:3.393}, uDiskOut:{value:15}, uDiskTmax:{value:PHYS.DISK_TMAX_VIS}, uDiskBright:{value:0.6},
         uTime:{value:0}, uSkyFade:{value:1}, uHawkCol:{value:new THREE.Vector3()}, uHawkGlow:{value:0},
+        uNebR:{value:0}, uNebInt:{value:0}, uNebDust:{value:0}, uNebPWN:{value:0},
         uRes:{value:new THREE.Vector2(this.w,this.h)}, uBHuv:{value:new THREE.Vector2(.5,.5)}, uPR:{value:pixelRatio},
       },
       vertexShader:QUAD_VS, depthTest:false, depthWrite:false, extensions:{shaderTextureLOD:true},
@@ -460,6 +455,42 @@ class Pipeline {
         uniform mat4 uInvViewProj, uViewProj; uniform vec3 uCamPos, uCamFwd;
         uniform float uNear,uFar,uM,uSpin,uBend,uRH,uDiskOpacity,uDiskIn,uDiskOut,uDiskTmax,uDiskBright,uTime,uSkyFade,uHawkGlow,uPR;
         uniform vec3 uHawkCol; uniform vec2 uRes, uBHuv; varying vec2 vUv;
+        uniform float uNebR,uNebInt,uNebDust,uNebPWN;
+        // remnant ray march: line emission from shocked gas, extinction by dust
+        vec4 nebula(vec3 ro, vec3 rd){
+          float R=uNebR; float bq=dot(ro,rd); float h=bq*bq-dot(ro,ro)+R*R;
+          if(h<=0.0) return vec4(0.0,0.0,0.0,1.0);
+          h=sqrt(h); float t0=max(-bq-h,0.0), t1=-bq+h;
+          if(t1<=0.0) return vec4(0.0,0.0,0.0,1.0);
+          float dt=(t1-t0)/float(NEB_STEPS);
+          float t=t0+dt*fract(52.9829189*fract(dot(gl_FragCoord.xy,vec2(0.06711056,0.00583715))));
+          vec3 em=vec3(0.0); float T=1.0; float dl=dt/R;
+          vec3 O3=vec3(0.08,0.60,0.66), Ha=vec3(1.0,0.12,0.19), S2=vec3(1.0,0.40,0.14), Sy=vec3(0.42,0.58,1.0);
+          for(int i=0;i<NEB_STEPS;i++){
+            if(T<0.01) break;
+            vec3 q=(ro+rd*t)/R; float r=length(q);
+            vec3 e=vec3(0.0); float dust=0.0;
+            float pwn=exp(-r*r/0.02)*uNebPWN;
+            if(r>0.38){
+              float warp=fbm3(q*2.2+vec3(1.7,4.1,uTime*0.004));
+              float rr=r+0.19*warp;
+              float finger=snoise(q/r*5.5+3.3)*0.5+0.5;
+              float shell=exp(-pow((rr-0.76-0.14*finger)/(0.09+0.07*finger),2.0));
+              float fil=pow(1.0-abs(snoise(q*4.6+warp*1.6)),5.0);
+              float clump=smoothstep(-0.35,0.6,warp+0.4*snoise(q*7.0));
+              float gas=shell*(0.2+1.9*fil)*(0.35+0.9*clump);
+              float ion=smoothstep(0.68,0.9,rr+0.18*finger-0.08+0.12*snoise(q*1.7+2.0));
+              vec3 lc=mix(O3*1.7,Ha,ion); lc=mix(lc,S2,smoothstep(0.45,0.9,fil)*ion*0.5);
+              e=lc*gas;
+              dust=uNebDust*smoothstep(0.3,0.62,0.5+0.5*snoise(q*2.4+vec3(3.0,1.0,7.0))+0.25*warp-0.3*fil)*exp(-pow((rr-0.7)/0.19,2.0))*14.0;
+              e+=vec3(0.30,0.15,0.07)*dust*0.012*(0.5+0.5*uNebPWN);
+            }
+            e+=Sy*pwn*(0.6+0.8*abs(snoise(q*9.0+uTime*0.05)))*2.4;
+            em+=T*e*dl; T*=exp(-dust*dl);
+            t+=dt;
+          }
+          return vec4(em*3.2*uNebInt, mix(1.0,T,uNebInt));
+        }
         const float RINT=22.0; const float RSTART=60.0;
 
         float objDistAt(vec2 uv, vec3 dir){
@@ -469,15 +500,13 @@ class Pipeline {
           return -vz/max(dot(dir,uCamFwd),1e-3);
         }
         vec3 sky(vec3 d){ return textureCubeLodEXT(tSky,d,0.0).rgb*uSkyFade; }
-        // escaped ray → lensed background: sky + any scene content behind the hole
         bool toUV(vec3 q, out vec2 suv){
           vec4 clip=uViewProj*vec4(q,1.0);
           if(clip.w<=0.0) return false;
           suv=clip.xy/clip.w*0.5+0.5;
           return suv.x>0.0&&suv.x<1.0&&suv.y>0.0&&suv.y<1.0;
         }
-        // escaped ray: lensed sky + diffuse scene light (nebulae, grid). Solid bodies behind the
-        // hole are shown at their own pixel (occluded by disk/shadow) rather than re-imaged.
+        // escaped ray: lensed sky plus diffuse scene light
         vec3 background(vec3 od, vec3 scol, float objW, float tcaW){
           if(objW<1e19) return scol;
           return sky(od)+scol;
@@ -546,6 +575,7 @@ class Pipeline {
               if(objD<tca && objD<L){ acc=scol; status=3.0; }
               float h2=b*b; float rEsc=max(rc,RSTART)+1.0;
               for(int i=0;i<MAX_STEPS;i++){
+                if(status>0.5) break;
                 float r=length(p);
                 float go = (status<0.5) ? 1.0 : 0.0;
                 if(go>0.5 && r<uRH) status=2.0;
@@ -582,6 +612,7 @@ class Pipeline {
             if(status>0.5 && status<1.5) acc+=trans*background(outDir,scol,objW,tca*uM);
             col=acc;
           }
+          if(uNebInt>0.001){ vec4 nb=nebula(uCamPos,dir); col=nb.rgb+col*nb.a; }
           // Hawking ember: unresolved point source once the hole is smaller than a pixel
           float pr=uPR; float d2=dot(dpx,dpx)/(pr*pr);
           col+=uHawkCol*uHawkGlow*(exp(-d2/5.0)*3.0+exp(-sqrt(d2)/22.0)*0.25);
@@ -615,10 +646,7 @@ class Pipeline {
   }
 }
 
-// ============================================================================
-// SKY — static Milky Way + 40k stars with blackbody colours, baked to a cube map
-// (stars do not twinkle in vacuum; the sky is sampled by bent light rays)
-// ============================================================================
+// Sky: Milky Way and blackbody-coloured stars baked into a cube map
 function buildSky(){
   const size=QUALITY.cube;
   const rt=new THREE.WebGLCubeRenderTarget(size,{type:HDR_TYPE,format:THREE.RGBAFormat,generateMipmaps:true,minFilter:THREE.LinearMipmapLinearFilter,magFilter:THREE.LinearFilter});
@@ -684,19 +712,121 @@ function buildSky(){
   return rt.texture;
 }
 
-// ============================================================================
-// SIMULATION STATE
-// ============================================================================
+// Generative score: six-voice pad, sub, shimmer and wind, re-voiced per phase, plus event hits
+const NOTE=n=>{ const m=/^([A-G])(#|b)?(-?\d)$/.exec(n); const k={C:0,D:2,E:4,F:5,G:7,A:9,B:11}[m[1]]+(m[2]==='#'?1:m[2]==='b'?-1:0); return 440*Math.pow(2,(k+(+m[3]+1)*12-69)/12); };
+const SCORE=[
+  {ch:['D2','A2','D3','F3','E4','A4'],   cut:900,  pad:0.16, sub:0.10, shim:0.03, wind:0.00},
+  {ch:['Bb1','F2','D3','A3','C4','F4'],  cut:1300, pad:0.18, sub:0.13, shim:0.03, wind:0.01},
+  {ch:['C#2','G2','C#3','E3','G3','A#3'],cut:650,  pad:0.17, sub:0.16, shim:0.02, wind:0.03},
+  {ch:['F2','C3','A3','E4','G4','B4'],   cut:1900, pad:0.19, sub:0.09, shim:0.07, wind:0.05},
+  {ch:['E2','B2','E3','G3','F#4','B4'],  cut:1200, pad:0.15, sub:0.10, shim:0.05, wind:0.03},
+  {ch:['C2','G2','Eb3','G3','D4','Bb4'], cut:700,  pad:0.17, sub:0.20, shim:0.03, wind:0.02},
+  {ch:['C2','G2','Eb3','Bb3','D4','G4'], cut:1500, pad:0.18, sub:0.18, shim:0.05, wind:0.03},
+  {ch:['Ab1','Eb2','C3','G3','Bb3','Eb4'],cut:1150,pad:0.18, sub:0.18, shim:0.04, wind:0.03},
+  {ch:['E3','B3','E4','F#4','B4','D#5'], cut:1600, pad:0.14, sub:0.03, shim:0.06, wind:0.00},
+  {ch:['E3','B3','E4','F#4','B4','D#5'], cut:4000, pad:0.28, sub:0.05, shim:0.05, wind:0.07},
+  {ch:['A3','E4','A4','B4','C#5','E5'],  cut:900,  pad:0.07, sub:0.00, shim:0.03, wind:0.00},
+];
+const Score={ ctx:null, on:false, ready:false, acc:0, lastP:-1, chordKey:'',
+  init(){
+    const C=window.AudioContext||window.webkitAudioContext; if(!C) return false;
+    const c=this.ctx=new C();
+    this.master=c.createGain(); this.master.gain.value=0;
+    const comp=c.createDynamicsCompressor(); comp.threshold.value=-16; comp.ratio.value=3; comp.attack.value=0.02; comp.release.value=0.5;
+    this.master.connect(comp); comp.connect(c.destination);
+    const n=c.sampleRate*4, nb=c.createBuffer(2,n,c.sampleRate);
+    for(let ch=0;ch<2;ch++){ const d=nb.getChannelData(ch); for(let i=0;i<n;i++) d[i]=Math.random()*2-1; }
+    this.noiseBuf=nb;
+    this.verb=c.createConvolver(); this.verb.buffer=this.impulse(7,2.4);
+    const wet=c.createGain(); wet.gain.value=0.85; this.verb.connect(wet); wet.connect(this.master);
+    this.bus=c.createGain(); this.bus.connect(this.master); this.bus.connect(this.verb);
+    this.filt=c.createBiquadFilter(); this.filt.type='lowpass'; this.filt.frequency.value=900; this.filt.Q.value=0.5;
+    this.pad=c.createGain(); this.pad.gain.value=0; this.filt.connect(this.pad); this.pad.connect(this.bus);
+    this.voices=[];
+    for(let i=0;i<6;i++){
+      const g=c.createGain(); g.gain.value=0.16;
+      const oscs=[-7,7].map(dc=>{ const o=c.createOscillator(); o.type=i<2?'triangle':'sawtooth'; o.detune.value=dc+(Math.random()-0.5)*5; o.connect(g); o.start(); return o; });
+      const l=c.createOscillator(); l.frequency.value=0.03+Math.random()*0.07; const lg=c.createGain(); lg.gain.value=0.07; l.connect(lg); lg.connect(g.gain); l.start();
+      if(c.createStereoPanner){ const p=c.createStereoPanner(); p.pan.value=(i/5-0.5)*1.3; g.connect(p); p.connect(this.filt); } else g.connect(this.filt);
+      this.voices.push({oscs,g});
+    }
+    this.subO=c.createOscillator(); this.subO.type='sine'; this.subG=c.createGain(); this.subG.gain.value=0; this.subO.connect(this.subG); this.subG.connect(this.master); this.subO.start();
+    this.shimG=c.createGain(); this.shimG.gain.value=0; this.shimG.connect(this.verb);
+    this.shim=[0,1,2].map(k=>{ const o=c.createOscillator(); o.type='sine'; const g=c.createGain(); g.gain.value=0.25; const l=c.createOscillator(); l.frequency.value=0.05+k*0.031; const lg=c.createGain(); lg.gain.value=0.25; l.connect(lg); lg.connect(g.gain); l.start(); o.connect(g); g.connect(this.shimG); o.start(); return o; });
+    const ns=c.createBufferSource(); ns.buffer=nb; ns.loop=true;
+    this.windF=c.createBiquadFilter(); this.windF.type='bandpass'; this.windF.frequency.value=420; this.windF.Q.value=0.8;
+    this.windG=c.createGain(); this.windG.gain.value=0; ns.connect(this.windF); this.windF.connect(this.windG); this.windG.connect(this.bus); ns.start();
+    const wl=c.createOscillator(); wl.frequency.value=0.06; const wlg=c.createGain(); wlg.gain.value=260; wl.connect(wlg); wlg.connect(this.windF.frequency); wl.start();
+    this.ready=true; this.lastP=-1; this.chordKey='';
+    return true;
+  },
+  impulse(sec,decay){ const c=this.ctx, n=Math.floor(c.sampleRate*sec), b=c.createBuffer(2,n,c.sampleRate);
+    for(let ch=0;ch<2;ch++){ const d=b.getChannelData(ch); for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/n,decay); } return b; },
+  setOn(v){
+    this.on=v;
+    if(v&&!this.ready){ if(!this.gestured){ this.mark(); return; } if(!this.init()) return; }
+    this.on=v; const b=$('btn-sound'); if(b){ b.setAttribute('aria-pressed',String(v)); b.setAttribute('aria-label',v?'Mute score':'Play score'); }
+    if(!this.ready) return;
+    const t=this.ctx.currentTime; this.master.gain.cancelScheduledValues(t); this.master.gain.setTargetAtTime(v?0.9:0,t,v?1.5:0.25);
+    if(v){ if(!isPaused) this.ctx.resume().then(()=>this.mark()); this.lastP=-1; }
+    setTimeout(()=>this.mark(),300); this.mark();
+  },
+  unlock(){ this.gestured=true; if(!this.on) return; if(!this.ready){ this.setOn(true); return; } if(this.ctx.state!=='running'&&!isPaused) this.ctx.resume().then(()=>this.mark()); },
+  mark(){ const b=$('btn-sound'); if(!b) return; b.setAttribute('aria-pressed',String(this.on)); b.classList.toggle('wait', this.on&&(!this.ctx||this.ctx.state!=='running')); },
+  suspend(p){ if(!this.ready) return; if(p) this.ctx.suspend(); else if(this.on) this.ctx.resume(); },
+  chord(notes,glide){
+    const key=notes.join(); if(key===this.chordKey) return; this.chordKey=key; const t=this.ctx.currentTime;
+    notes.forEach((nm,i)=>{ const f=NOTE(nm); this.voices[i].oscs.forEach(o=>{ o.frequency.cancelScheduledValues(t); o.frequency.setValueAtTime(o.frequency.value,t); o.frequency.exponentialRampToValueAtTime(f,t+glide); }); });
+    const root=NOTE(notes[0]); this.subO.frequency.setTargetAtTime(root/2>=27?root/2:root,t,glide/3);
+    this.shim.forEach((o,k)=>o.frequency.setTargetAtTime(NOTE(notes[notes.length-1-(k%2)])*(k===2?4:2),t,glide/3));
+  },
+  mood(m,tc){ const t=this.ctx.currentTime;
+    this.filt.frequency.setTargetAtTime(m.cut,t,tc); this.pad.gain.setTargetAtTime(m.pad,t,tc); this.subG.gain.setTargetAtTime(m.sub,t,tc);
+    this.shimG.gain.setTargetAtTime(m.shim,t,tc); this.windG.gain.setTargetAtTime(m.wind,t,tc); },
+  update(P,pP,dt){
+    if(!this.ready||!this.on) return;
+    this.acc+=dt; if(this.acc<0.25&&P===this.lastP) return; this.acc=0; this.lastP=P;
+    let sc=Object.assign({},SCORE[P]), tc=1.6, glide=4;
+    if(P===PH.rsg) sc.cut=lerp(900,1500,pP);
+    if(P===PH.sn&&sn.fired) sc={ch:['D2','A2','D3','A3','E4','A4'],cut:2600,pad:0.2,sub:0.12,shim:0.06,wind:0.07};
+    if(P===PH.hawk){ const k=smooth(0,0.6,pP); sc.pad=lerp(0.15,0.07,k); sc.cut=lerp(1600,800,k);
+      if(pP>0.85){ const s2=smooth(0.85,1,pP); sc.pad=lerp(0.07,0.28,s2); sc.cut=lerp(800,4500,s2); sc.wind=0.07*s2; } }
+    if(P===PH.die&&sn.dieFired){ sc=Object.assign({},SCORE[PH.dark],{pad:0.05}); tc=0.4; glide=0.6; }
+    if(P===PH.dark) sc.pad=lerp(0.07,0.035,pP);
+    this.chord(sc.ch,glide); this.mood(sc,tc);
+  },
+  boom(level,f0,f1,dur){ const c=this.ctx,t=c.currentTime; const o=c.createOscillator(); o.type='sine';
+    o.frequency.setValueAtTime(f0,t); o.frequency.exponentialRampToValueAtTime(f1,t+dur);
+    const g=c.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(level,t+0.03); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    o.connect(g); g.connect(this.bus); o.start(t); o.stop(t+dur+0.1); },
+  noise(level,f0,f1,dur,type,q){ const c=this.ctx,t=c.currentTime; const src=c.createBufferSource(); src.buffer=this.noiseBuf;
+    const f=c.createBiquadFilter(); f.type=type||'lowpass'; f.Q.value=q||0.7; f.frequency.setValueAtTime(f0,t); f.frequency.exponentialRampToValueAtTime(f1,t+dur);
+    const g=c.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(level,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    src.connect(f); f.connect(g); g.connect(this.bus); src.start(t,Math.random()*2); src.stop(t+dur+0.1); },
+  hit(type){
+    if(!this.ready||!this.on||isPaused) return;
+    if(type==='breakout'){ this.boom(0.9,70,24,5.5); this.noise(0.5,6000,120,6.5); }
+    else if(type==='collapse'){ this.boom(0.75,55,20,4.5); this.noise(0.25,900,60,3.5); }
+    else if(type==='tear'){ this.noise(0.2,2600,280,1.6,'bandpass',1.2); this.boom(0.28,80,38,2.0); }
+    else if(type==='feed'){ this.boom(0.38,110,42,1.4); this.noise(0.1,4500,900,0.9,'highpass'); }
+    else if(type==='tick'){ this.noise(0.035,6000,3500,0.035,'highpass'); }
+    else if(type==='burst'){ this.boom(1.0,95,22,7.5); this.noise(0.75,9000,90,8.5); }
+  },
+};
+
+// Simulation state
 let simTime=0, speedMul=1, isPaused=false;
 let phase=0, phaseTime=0;
 const show={lensing:true,bloom:true,fabric:false,orbits:false,photons:false};
 let camAngle=0.6, camPitch=0.3, camDist=70, userCamTimer=0, isDrag=false, lastMX=0, lastMY=0, pinch=0;
 let shake=0;
-const PHASE_DUR=[13, 13, 11, 9, 9, 9, 999, 26, 7, 16];
+const PH={ms:0,rsg:1,sn:2,neb:3,ns:4,bh:5,jet:6,acc:7,hawk:8,die:9,dark:10};
+const PHASE_DUR=[13, 13, 11, 18, 9, 9, 9, 999, 26, 7, 18];
 const PHASES=[
   {key:'ms',   label:'Main sequence', title:'Main sequence', sub:'A 25 M☉ O-type star fuses hydrogen through the CNO cycle. Surface 37,000 K, 100,000 times the Sun’s luminosity.'},
   {key:'rsg',  label:'Supergiant',    title:'Red supergiant', sub:'Hydrogen exhausted. The envelope swells a thousandfold and cools to 3,600 K; giant convection cells boil across the surface. Mercury is engulfed.'},
   {key:'sn',   label:'Supernova',     title:'Core collapse', sub:'The iron core implodes at a quarter of light speed. Neutrinos carry off 3×10⁵³ erg; the shock breaks out and the star becomes a fireball.'},
+  {key:'neb',  label:'Nebula',        title:'Supernova remnant', sub:'Ejecta plough into interstellar gas at 5,000 km/s. Shocked hydrogen glows red, oxygen teal, sulphur orange. Cooling ejecta condense into dust that blots out the stars behind; the newborn pulsar lights a blue synchrotron core.'},
   {key:'ns',   label:'Neutron star',  title:'Neutron star', sub:'A 12 km sphere of nuclear matter, 1.8 M☉, spinning hundreds of times a second inside the expanding remnant. Fallback pushes it toward the TOV limit.'},
   {key:'bh',   label:'Black hole',    title:'Kerr black hole', sub:'Collapse past 2.25 M☉. Fallback grows the hole to 10 M☉ with spin a/M = 0.7. Light bends around it; a disk ignites at the ISCO.'},
   {key:'jet',  label:'Jets',          title:'Relativistic jets', sub:'Magnetic fields threading the spinning horizon launch twin jets (Blandford–Znajek). The approaching jet is Doppler-boosted; the counter-jet fades.'},
@@ -712,11 +842,9 @@ const planets=[];
 let lightPos=new THREE.Vector3(), lightCol=new THREE.Vector3(1,1,1);
 const st = { R:3, Teff:37000, bright:3.5, alpha:1, cell:14, contrast:0.03, disp:0, flow:0.02, visible:true, coronaOp:0.35 };
 const bh = { M:0, spin:0.7, disk:0, diskOut:15, hawkT:0, glow:0, massSun:0 };
-let hud = { massSun:25, temp:'', tempLabel:'T<sub>eff</sub>', size:'', epoch:'', spin:'—', z:'—' };
+let hud = { massSun:25, temp:'', tempLabel:'T<sub>eff</sub>', size:'', epoch:'', spin:'n/a', z:'n/a' };
 
-// ============================================================================
-// STAR — photosphere with Worley granulation and Eddington limb (T(μ) colour)
-// ============================================================================
+// Star photosphere: Worley granulation and Eddington limb
 function buildStar(){
   const mat=new THREE.ShaderMaterial({
     uniforms:{uTime:{value:0},uR:{value:3},uDisp:{value:0},uTeff:{value:37000},uNorm:{value:1},uBright:{value:3},uAlpha:{value:1},uCell:{value:14},uContrast:{value:0.03},uFlow:{value:0.02}},
@@ -757,9 +885,7 @@ function buildStar(){
   scene.add(coronaMesh);
 }
 
-// ============================================================================
-// EJECTA — supernova remnant shell: Rayleigh–Taylor filaments in Hα, [O III], [S II]
-// ============================================================================
+// Supernova ejecta shells with Rayleigh-Taylor filaments
 function shellMaterial(seed){
   return new THREE.ShaderMaterial({
     uniforms:{uTime:{value:0},uSeed:{value:seed},uInt:{value:0},uHot:{value:1},uHotCol:{value:new THREE.Vector3(1,1,1)},uSynch:{value:0},uFil:{value:1}},
@@ -796,10 +922,7 @@ function buildEjecta(){
   lightShell=new THREE.Mesh(new THREE.SphereGeometry(1,96,64),shellMaterial(2.2)); lightShell.visible=false; scene.add(lightShell);
 }
 
-// ============================================================================
-// NEUTRON STAR — 12 km (0.81 M_BH units). Pulsar beams are radio; shown faint,
-// with the real observable: a flash when a beam sweeps across the observer.
-// ============================================================================
+// Neutron star, 12 km, with faint radio beams and a lighthouse flash
 function buildNeutronStar(){
   nsGroup=new THREE.Group();
   const piv=new THREE.Group(); piv.rotation.z=0.52; nsGroup.add(piv); nsGroup.userData.piv=piv;
@@ -841,9 +964,7 @@ function buildNeutronStar(){
   nsGroup.visible=false; scene.add(nsGroup);
 }
 
-// ============================================================================
-// JETS — spine/sheath synchrotron jets with relativistic Doppler boosting D^(2+α)
-// ============================================================================
+// Jets: spine/sheath synchrotron with relativistic Doppler boosting
 function buildJets(){
   const N=IS_MOBILE?3500:7000;
   [1,-1].forEach(sign=>{
@@ -879,9 +1000,7 @@ function buildJets(){
   });
 }
 
-// ============================================================================
-// PLANETS — lit by whatever is at the centre (star, fireball, disk), tidal disruption
-// ============================================================================
+// Planets, lit by whatever sits at the centre
 const PD=[
   {name:'Mercury',r:0.35,color:[0.62,0.55,0.50],orbit:6,  phase:0,  type:'rocky',gmass:0.055},
   {name:'Venus',  r:0.60,color:[0.92,0.82,0.62],orbit:8.5,phase:2.1,type:'rocky',gmass:0.815},
@@ -959,23 +1078,39 @@ function buildPlanets(){
     const og=new THREE.BufferGeometry(); og.setAttribute('position',new THREE.Float32BufferAttribute(op,3));
     const orbitLine=new THREE.Line(og,new THREE.LineBasicMaterial({color:0x9fb3d1,transparent:true,opacity:0.12,depthWrite:false}));
     orbitLine.visible=false; scene.add(orbitLine);
-    // tidal stream debris (overlay)
-    const DN=IS_MOBILE?700:1400, life=new Float32Array(DN), sz=new Float32Array(DN), dp=new Float32Array(DN*3);
-    for(let j=0;j<DN;j++){ life[j]=Math.random(); sz[j]=0.3+Math.random()*1.1; }
-    const dg=new THREE.BufferGeometry(); dg.setAttribute('position',new THREE.BufferAttribute(dp,3)); dg.setAttribute('life',new THREE.BufferAttribute(life,1)); dg.setAttribute('size',new THREE.BufferAttribute(sz,1));
-    const dm=new THREE.ShaderMaterial({uniforms:{uTime:{value:0},uAlpha:{value:0},uPos:{value:new THREE.Vector3()},uCol:{value:new THREE.Vector3(...pd.color)},uPR:{value:pixelRatio},uRin:{value:3.4}},
+    // tidal stream: each particle carries its own orbital energy, so Keplerian shear stretches the debris into an arc
+    const DN=Math.round((IS_MOBILE?900:2200)*(pd.type==='gas'?1.6:1)), rnd=new Float32Array(DN*4), dp=new Float32Array(DN*3);
+    for(let j=0;j<DN*4;j++) rnd[j]=Math.random();
+    const dg=new THREE.BufferGeometry(); dg.setAttribute('position',new THREE.BufferAttribute(dp,3)); dg.setAttribute('aR',new THREE.BufferAttribute(rnd,4));
+    const dm=new THREE.ShaderMaterial({uniforms:{uTime:{value:0},uAlpha:{value:0},uTD:{value:0},uRt:{value:8},uTheta0:{value:0},uRin:{value:3.4},uK:{value:1},
+        uCol:{value:new THREE.Vector3(...pd.color)},uLight:{value:new THREE.Vector3()},uPR:{value:pixelRatio},uSize:{value:pd.r}},
       transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,
-      vertexShader:NOISE_GLSL+`attribute float life,size; uniform float uTime,uAlpha,uPR,uRin; uniform vec3 uPos,uCol; varying vec3 vC; varying float vA;
-        void main(){ float cyc=life*1.6+0.6; float age=mod(uTime*(0.5+life*0.5),cyc)/cyc;
-          float r0=length(uPos.xz); float a0=atan(uPos.z,uPos.x);
-          float t=age*age; float r=mix(r0,uRin,t);
-          float a=a0+(age*(3.0+life*4.0))*sqrt(10.0/max(r,1.0))*0.6;   // trailing stream
-          vec3 p=vec3(cos(a)*r,0.0,sin(a)*r);
-          p.y+=snoise(vec3(age*4.0,life*9.0,uTime*0.2))*(1.0-t)*0.35;
-          p.xz+=vec2(snoise(vec3(life*7.0,age*3.0,1.0)),snoise(vec3(life*5.0,age*3.0,4.0)))*(1.0-t)*0.6;
-          vC=mix(uCol*0.8,vec3(1.0,0.5,0.12)*2.0,smoothstep(0.2,0.6,t)); vC=mix(vC,vec3(2.4,2.0,1.6),smoothstep(0.65,1.0,t));
-          vA=uAlpha*sin(age*3.14159);
-          vec4 mv=modelViewMatrix*vec4(p,1.0); gl_PointSize=size*uPR*(1.0+t*2.0)*(70.0/-mv.z); gl_Position=projectionMatrix*mv; }`,
+      vertexShader:NOISE_GLSL+BB_GLSL+`attribute vec4 aR; uniform float uTime,uAlpha,uTD,uRt,uTheta0,uRin,uK,uPR,uSize; uniform vec3 uCol,uLight; varying vec3 vC; varying float vA;
+        void main(){
+          float de=aR.x*2.0-1.0;                         // specific-energy spread across the planet
+          float bound=step(de,0.5);
+          float t=max(uTD-aR.y*1.1,0.0);                 // material peels off progressively
+          float r0=uRt*(1.0+0.22*de);
+          float g=bound>0.5?(0.16+0.5*(0.5-de)):-0.05;  // bound debris falls back, the unbound tail escapes
+          float r=r0*exp(-g*t);
+          float eaten=bound*smoothstep(uRin*1.15,uRin*0.97,r);
+          r=max(r,uRin*0.97);
+          float w0=uK*pow(r0,-1.5);
+          float th=uTheta0+w0*(exp(1.5*g*t)-1.0)/(1.5*g);
+          vec3 p=vec3(cos(th)*r,0.0,-sin(th)*r);
+          vec3 lat=vec3(aR.z-0.5,(aR.w-0.5)*0.5,fract(aR.y*7.31)-0.5);
+          float thick=uSize*(0.9*exp(-t*0.8)+0.08);
+          p+=lat*thick+vec3(snoise(vec3(aR.x*9.0,t*0.7,1.0)),0.0,snoise(vec3(aR.x*9.0,t*0.7,4.0)))*thick*0.6;
+          float heat=smoothstep(0.0,2.5,t)*pow(clamp(uRin/r,0.0,1.0),0.9);
+          float T=400.0+8600.0*heat;                     // viscous and shock heating as it compresses
+          vec3 bb=planckRGB(T); float L=lum(bb);
+          vec3 glow=bb/max(L,1e-8)*min(L*${(1/lum3(planckRGB(6000))).toFixed(4)},4.0);
+          vC=uCol*uLight*0.12*(1.0-heat)+glow*1.6;
+          vA=uAlpha*smoothstep(0.0,0.3,uTD-aR.y*1.1)*(1.0-eaten)*(bound>0.5?1.0:1.0-smoothstep(0.0,7.0,t));
+          vec4 mv=modelViewMatrix*vec4(p,1.0);
+          gl_PointSize=(0.8+aR.w*1.4)*uPR*(80.0/-mv.z)*(1.0+heat);
+          gl_Position=projectionMatrix*mv;
+        }`,
       fragmentShader:`varying vec3 vC; varying float vA; void main(){ vec2 q=gl_PointCoord-0.5; float a=exp(-dot(q,q)*12.0); gl_FragColor=vec4(vC*a*vA,1.0); }`});
     const debris=new THREE.Points(dg,dm); debris.frustumCulled=false; debris.layers.set(LAYER_OVERLAY); debris.visible=false; scene.add(debris);
     planets.push({def:pd,grp,body,mat:m,rings,orbitLine,debris,debrisMat:dm,orbit:pd.orbit,angle:pd.phase,state:'ok',inspiralT:-1,r0:pd.orbit,flash:0});
@@ -983,9 +1118,7 @@ function buildPlanets(){
   buildBodiesTable();
 }
 
-// ============================================================================
-// OVERLAY PARTICLES: Hawking quanta, final burst, radiation remnant, photon paths
-// ============================================================================
+// Overlay particles: Hawking quanta, final burst, radiation, photon paths
 function particleSystem(N,init,vs,fs,uniforms){
   const pos=new Float32Array(N*3),vel=new Float32Array(N*3),col=new Float32Array(N*3),sz=new Float32Array(N),life=new Float32Array(N);
   for(let i=0;i<N;i++) init(i,pos,vel,col,sz,life);
@@ -1027,9 +1160,7 @@ function buildOverlayParticles(){
     photonSystems.push({pts,geo:g,startA:(b/6)*Math.PI*2,dist:22+b*4,yOff:(b-2.5)*1.8,spd:0.25+b*0.04}); }
 }
 
-// ============================================================================
-// SPACETIME GRID — Flamm-style embedding diagram (diagram layer, off by default)
-// ============================================================================
+// Spacetime embedding grid (diagram layer, off by default)
 function buildFabric(){
   const g=new THREE.PlaneGeometry(140,140,220,220); g.rotateX(-Math.PI/2);
   const wells=[]; for(let i=0;i<8;i++) wells.push(new THREE.Vector4());
@@ -1046,9 +1177,7 @@ function buildFabric(){
   fabric.position.y=-6; fabric.visible=false; scene.add(fabric);
 }
 
-// ============================================================================
 // HUD
-// ============================================================================
 const $=id=>document.getElementById(id);
 const hudCache={};
 function setText(id,v,html){ if(hudCache[id]===v) return; hudCache[id]=v; const e=$(id); if(html) e.innerHTML=v; else e.textContent=v; }
@@ -1060,7 +1189,7 @@ function buildBodiesTable(){
     tb.appendChild(tr); });
 }
 function buildTimeline(){
-  const tr=$('tl-track'); const durs=PHASE_DUR.map((d,i)=>i===6?40:d); const tot=durs.reduce((a,b)=>a+b,0);
+  const tr=$('tl-track'); const durs=PHASE_DUR.map((d,i)=>i===PH.acc?40:d); const tot=durs.reduce((a,b)=>a+b,0);
   PHASES.forEach((p,i)=>{ const b=document.createElement('button'); b.style.flex='1 1 0'; b.setAttribute('aria-label',`Go to ${p.label}`); b.title=p.label;
     b.innerHTML=`<span class="lb">${p.label}</span><span class="bar"><b></b></span>`; b.addEventListener('click',()=>skipToPhase(i)); tr.appendChild(b); });
 }
@@ -1068,25 +1197,24 @@ const EQS=[
   ['L ∝ M<sup>3.5</sup>','dP/dr = −Gm(r)ρ/r²'],
   ['L = 4πR²σT<sub>eff</sub>⁴','3 ⁴He → ¹²C + γ (triple-α)'],
   ['⁵⁶Fe + γ → 13 ⁴He + 4n − 124 MeV','E<sub>ν</sub> ≈ 3×10⁵³ erg'],
+  ['R<sub>s</sub> ∝ (E/ρ)<sup>1/5</sup> t<sup>2/5</sup> (Sedov–Taylor)','Hα 656.3 nm · [O III] 500.7 nm · [S II] 671.6 nm'],
   ['dP/dr = −(G/r²)(ρ+P/c²)(m+4πr³P/c²)/(1−2Gm/rc²)','Ω²R³ < GM (break-up)'],
   ['Δ = r² − 2Mr + a²','r₊ = M + √(M² − a²)','r<sub>ISCO</sub> = 3.393 M (a = 0.7)','d²x/dλ² = −3Mh²x / r⁵'],
   ['P<sub>BZ</sub> = (κ/4πc) Φ² Ω<sub>H</sub>²','D = [Γ(1 − β cos θ)]⁻¹'],
   ['r<sub>t</sub> ≈ R<sub>p</sub>(M<sub>BH</sub>/m<sub>p</sub>)<sup>1/3</sup>','g = 1 / [u<sup>t</sup>(1 − Ωλ)]','I<sub>ν,obs</sub> = g³ I<sub>ν,em</sub>'],
   ['T<sub>H</sub> = ħc³ / 8πGMk<sub>B</sub>','dM/dt ∝ −1/M²'],
   ['t<sub>evap</sub> ∝ M³','P = ħc⁶ / 15360πG²M²'],
-  ['ρ<sub>γ</sub> ∝ a⁻⁴','—'],
+  ['ρ<sub>γ</sub> ∝ a⁻⁴','n/a'],
 ];
 function showCaption(i){
   const c=$('caption'); c.classList.remove('enter'); void c.offsetWidth; c.classList.add('enter');
   $('cap-title').textContent=PHASES[i].title; $('cap-sub').textContent=PHASES[i].sub;
-  $('eqs').innerHTML=EQS[i].filter(e=>e!=='—').map(e=>`<div class="eq">${e}</div>`).join('');
+  $('eqs').innerHTML=EQS[i].filter(e=>e!=='n/a').map(e=>`<div class="eq">${e}</div>`).join('');
   document.querySelectorAll('#tl-track button').forEach((b,j)=>{ b.classList.toggle('cur',j===i); b.classList.toggle('done',j<i); b.querySelector('b').style.width=j<i?'100%':'0%'; });
   setText('v-phase',PHASES[i].label);
 }
 
-// ============================================================================
-// INIT
-// ============================================================================
+// Init
 function init(){
   try{
     renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance',alpha:false,stencil:false});
@@ -1108,20 +1236,21 @@ function init(){
   buildTimeline(); hookEvents();
   resetAll(); showCaption(0);
   let frames=0;
-  const boot=()=>{ frames++; animate(true); if(frames<3) requestAnimationFrame(boot); else { $('loader').classList.add('out'); requestAnimationFrame(loop); } };
+  const boot=()=>{ frames++; animate(true); if(frames<3) requestAnimationFrame(boot); else { $('loader').classList.add('out'); Score.setOn(true); requestAnimationFrame(loop); } };
   requestAnimationFrame(boot);
 }
 
-// ============================================================================
-// EVENTS
-// ============================================================================
-function setPaused(p){ isPaused=p; $('ic-pause').style.display=p?'none':''; $('ic-play').style.display=p?'':'none';
+// Events
+function setPaused(p){ isPaused=p; Score.suspend(p); $('ic-pause').style.display=p?'none':''; $('ic-play').style.display=p?'':'none';
   $('btn-play').setAttribute('aria-label',p?'Play':'Pause'); $('btn-play').title=p?'Play (Space)':'Pause (Space)'; }
 function setLayer(k,v){ show[k]=v; const b=document.querySelector(`[data-layer="${k}"]`); if(b) b.setAttribute('aria-pressed',String(v)); }
 function hookEvents(){
   addEventListener('resize',onResize);
   $('btn-play').addEventListener('click',()=>setPaused(!isPaused));
   $('btn-restart').addEventListener('click',()=>skipToPhase(0));
+  $('btn-sound').addEventListener('click',()=>{ Score.gestured=true; Score.setOn(!Score.on); });
+  const unlock=e=>{ if(e.target&&e.target.closest&&e.target.closest('#btn-sound')) return; Score.unlock(); };
+  ['pointerdown','keydown','touchstart'].forEach(ev=>addEventListener(ev,unlock,{capture:true,passive:true}));
   document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',()=>{ speedMul=parseFloat(b.dataset.speed);
     document.querySelectorAll('.seg button').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); }));
   document.querySelectorAll('[data-layer]').forEach(b=>b.addEventListener('click',()=>setLayer(b.dataset.layer,!show[b.dataset.layer])));
@@ -1142,16 +1271,17 @@ function hookEvents(){
     const k=e.key.toLowerCase();
     if(e.code==='Space'){ e.preventDefault(); setPaused(!isPaused); }
     else if(k==='r') skipToPhase(0);
-    else if(k==='arrowright') skipToPhase(Math.min(9,phase+1));
+    else if(k==='arrowright') skipToPhase(Math.min(PH.dark,phase+1));
     else if(k==='arrowleft') skipToPhase(Math.max(0,phase-1));
     else if(k==='l') setLayer('lensing',!show.lensing);
     else if(k==='b') setLayer('bloom',!show.bloom);
     else if(k==='g') setLayer('fabric',!show.fabric);
     else if(k==='o') setLayer('orbits',!show.orbits);
     else if(k==='p') setLayer('photons',!show.photons);
+    else if(k==='m'){ Score.gestured=true; Score.setOn(!Score.on); }
     else if(/^[0-9]$/.test(k)) skipToPhase(parseInt(k));
   });
-  document.addEventListener('visibilitychange',()=>{ if(!document.hidden) clock.getDelta(); });
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden) clock.getDelta(); Score.suspend(document.hidden||isPaused); });
 }
 function fitFov(){ const a=innerWidth/innerHeight; camera.fov = a<1 ? Math.min(78, 2*Math.atan(Math.tan(THREE.MathUtils.degToRad(21))/a)*180/Math.PI) : 46; }
 function onResize(){
@@ -1163,24 +1293,23 @@ function setPixelRatio(pr){
   scene.traverse(o=>{ if(o.material&&o.material.uniforms&&o.material.uniforms.uPR) o.material.uniforms.uPR.value=pr; });
 }
 
-// ============================================================================
-// PHASE CONTROL
-// ============================================================================
+// Phase control
 function resetPlanets(){
-  planets.forEach(p=>{ p.state='ok'; p.orbit=p.def.orbit; p.angle=p.def.phase; p.inspiralT=-1; p.flash=0; p.grp.visible=true; p.grp.scale.set(1,1,1);
+  planets.forEach(p=>{ p.state='ok'; p.orbit=p.def.orbit; p.angle=p.def.phase; p.inspiralT=-1; p.shredT=0; p.thud=false; p.flash=0; p.grp.visible=true; p.grp.scale.set(1,1,1);
     const u=p.mat.uniforms; u.uStretch.value=0; u.uHeat.value=0; u.uDissolve.value=0; p.debris.visible=false; });
 }
 function resetAll(){ simTime=0; phase=0; phaseTime=0; resetPlanets(); pipe.flash=0; pipe.exposure=0.9; shake=0; }
+function resetEvents(){ sn.fired=false; sn.bhFired=false; sn.dieFired=false; }
 function skipToPhase(i){
-  if(phase===9 && i===0){ /* restart */ }
-  phase=i; phaseTime=0; resetPlanets();
-  if(i>=2) consumePlanet(0,'engulfed',true);
-  if(i>=7) planets.forEach((p,k)=>{ if(p.state==='ok') consumePlanet(k,'consumed',true); });
+  phase=i; phaseTime=0; resetPlanets(); resetEvents(); if(i>=PH.die) sn.dieFired=false;
+  if(i>PH.sn){ sn.fired=true; } if(i>PH.bh) sn.bhFired=true;
+  if(i>=PH.sn) consumePlanet(0,'engulfed',true);
+  if(i>=PH.hawk) planets.forEach((p,k)=>{ if(p.state==='ok') consumePlanet(k,'consumed',true); });
   pipe.flash=0; showCaption(i);
 }
-function advance(){ if(phase>=9){ skipToPhase(0); return; } phase++; phaseTime=0; showCaption(phase); }
+function advance(){ if(phase>=PH.dark){ skipToPhase(0); return; } phase++; phaseTime=0; showCaption(phase); }
 function consumePlanet(i,how,silent){
-  const p=planets[i]; if(p.state!=='ok') return; p.state=how; p.grp.visible=false; p.debris.visible=false; p.orbitLine.visible=false;
+  const p=planets[i]; if(p.state==='consumed'||p.state==='engulfed') return; p.state=how; p.grp.visible=false; p.debris.visible=false; p.orbitLine.visible=false;
   if(!silent){ p.flash=1; pipe.flash=Math.max(pipe.flash,how==='engulfed'?0.15:0.45); }
 }
 const ease=t=>t<0.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
@@ -1188,6 +1317,19 @@ const smooth=(a,b,x)=>{ const t=Math.max(0,Math.min(1,(x-a)/(b-a))); return t*t*
 const lerp=(a,b,t)=>a+(b-a)*t;
 const lerpLog=(a,b,t)=>Math.exp(Math.log(a)+(Math.log(b)-Math.log(a))*t);
 
+const sn={fired:false,bhFired:false,dieFired:false};
+function pulsar(dt,period,amp){
+  const u=nsGroup.userData;
+  u.beamAngle=(u.beamAngle||0)+dt*2*Math.PI/period*0.012;
+  u.piv.rotation.y=u.beamAngle;
+  const ax=new THREE.Vector3(0,1,0).applyEuler(new THREE.Euler(0,u.beamAngle,0.52,'YXZ'));
+  const pulse=Math.pow(smooth(0.93,1.0,Math.abs(ax.dot(camera.position.clone().normalize()))),2);
+  u.beamMats.forEach(m=>{ m.uniforms.uA.value=(0.22+pulse*0.8)*amp; m.uniforms.uTime.value=simTime; });
+  u.fieldMats.forEach(m=>{ m.uniforms.uA.value=0.55*amp; m.uniforms.uTime.value=simTime; });
+  u.core.material.uniforms.uBright.value=5.5*(1+pulse*1.5); u.core.material.uniforms.uTime.value=simTime;
+  if(pulse>0.5 && !u.ticked){ u.ticked=true; Score.hit('tick'); } else if(pulse<0.2) u.ticked=false;
+  return pulse;
+}
 let camTarget={dist:70,pitch:0.3}, expoTarget=0.9, starLum=1;
 function updatePhase(dt){
   const P=phase, pP=Math.min(phaseTime/PHASE_DUR[P],1);
@@ -1195,83 +1337,88 @@ function updatePhase(dt){
   st.visible=false; nsGroup.visible=false; ejecta.visible=false; lightShell.visible=false;
   bh.M=0; bh.disk=0; bh.glow=0; let jetPower=0; let skyFade=1; let lensM=0;
   hawkPts.visible=false; explPts.visible=false; dustPts.visible=false;
-  hud.spin='—'; hud.z='—'; hud.tempLabel='T<sub>eff</sub>';
+  hud.spin='n/a'; hud.z='n/a'; hud.tempLabel='T<sub>eff</sub>';
   let light=0; let lightC=[1,1,1];
 
-  if(P===0){ // main sequence: 37 kK O star
+  const tB=PHASE_DUR[PH.sn]*0.09, SN_END=PHASE_DUR[PH.sn]-tB;
+  const shellR=t=>8.2+3.3*Math.pow(t,1.05);
+  const setShells=(R,intensity,hot,hotCol,synch)=>{ ejecta.visible=intensity>0.002; ejecta.scale.setScalar(R);
+    ejecta.children.forEach((m,k)=>{ const u=m.material.uniforms; u.uInt.value=intensity*(0.32-k*0.06); u.uHot.value=hot; if(hotCol) u.uHotCol.value.set(...hotCol); u.uSynch.value=synch; u.uTime.value=simTime; }); };
+  let neb={R:0,int:0,dust:0,pwn:0};
+
+  if(P===PH.ms){ // main sequence: 37 kK O star
     st.visible=true; st.R=3+Math.sin(simTime*0.4)*0.02; st.Teff=lerp(37500,33500,pP); st.cell=16; st.contrast=0.035; st.disp=0.004; st.flow=0.02; st.alpha=1; st.bright=2.6; st.coronaOp=0.6;
     hud.massSun=lerp(25,23.4,pP); hud.temp=`${Math.round(st.Teff).toLocaleString()} K`; hud.size=`${lerp(8.6,11,pP).toFixed(1)} R☉`; hud.epoch=`${(pP*6.4).toFixed(2)} Myr`;
     light=8; camTarget={dist:62,pitch:0.28}; expoTarget=0.5;
     if(pP>=1) advance();
-  } else if(P===1){ // red supergiant
+  } else if(P===PH.rsg){ // red supergiant
     const e=ease(pP), ec=Math.pow(pP,0.42);
     st.visible=true; st.R=lerpLog(3,8.2,e); st.Teff=lerpLog(33500,3550,ec); st.cell=lerp(16,2.6,ec); st.contrast=lerp(0.025,0.16,ec); st.disp=lerp(0.004,0.07,e); st.flow=lerp(0.02,0.05,e); st.alpha=1; st.bright=lerp(2.6,1.15,ec); st.coronaOp=lerp(0.5,0.7,e);
     hud.massSun=lerp(23.4,15.2,e); hud.temp=`${Math.round(st.Teff).toLocaleString()} K`; hud.size=`${Math.round(lerpLog(11,1050,e)).toLocaleString()} R☉`; hud.epoch=`${(6.4+pP*0.85).toFixed(2)} Myr`;
     if(st.R>planets[0].def.orbit-0.4) consumePlanet(0,'engulfed');
     light=lerp(8,6,e); camTarget={dist:lerp(62,80,e),pitch:0.26}; expoTarget=lerp(0.55,0.62,e);
     if(pP>=1) advance();
-  } else if(P===2){ // supernova
-    const tB=PHASE_DUR[2]*0.09; const snT=Math.max(0,phaseTime-tB);
+  } else if(P===PH.sn){ // core collapse, shock breakout, fireball
+    const snT=Math.max(0,phaseTime-tB);
     hud.massSun=snT>0?PHYS.NS_MASS:15.2;
     if(phaseTime<tB){
       st.visible=true; st.R=8.2+Math.sin(phaseTime*40)*0.01*phaseTime; st.Teff=3550; st.cell=2.6; st.contrast=0.16; st.disp=0.07; st.alpha=1; st.bright=1.15; st.coronaOp=0.7;
       hud.tempLabel='T<sub>core</sub>'; hud.temp=`${sci(lerpLog(3.5e9,1e11,phaseTime/tB))} K`; hud.epoch=`+${Math.round(phaseTime/tB*400)} ms`; hud.size='core 1.5×10³ km → 30 km';
-      light=6; expoTarget=0.62;
+      light=6; expoTarget=0.62; sn.fired=false;
     } else {
-      if(snT<0.05) { pipe.flash=Math.max(pipe.flash,2.4); pipe.flashCol.set(0.75,0.82,1.0); shake=Math.max(shake,1); }
-      const R=8.2+3.3*Math.pow(snT,1.05);
-      const Tph=5600+180000*Math.exp(-snT*1.7);
+      if(!sn.fired){ sn.fired=true; Score.hit('breakout'); }
+      if(snT<0.05){ pipe.flash=Math.max(pipe.flash,2.4); pipe.flashCol.set(0.75,0.82,1.0); shake=Math.max(shake,1); }
+      const R=shellR(snT), Tph=5600+180000*Math.exp(-snT*1.7);
       st.visible=snT<8.5; st.R=R; st.Teff=Tph; st.cell=1.7; st.contrast=0.22; st.disp=0.05; st.flow=0.12; st.coronaOp=0.9;
       st.alpha=1-smooth(3.2,7.8,snT); st.bright=3.6*(1+2.5*Math.exp(-snT*1.4));
-      ejecta.visible=true; ejecta.scale.setScalar(R*1.18);
       pipe.flash=Math.max(pipe.flash,0.9*Math.exp(-snT*0.55));
-      ejecta.children.forEach((m,k)=>{ const u=m.material.uniforms; u.uInt.value=smooth(1.0,5.0,snT)*(0.32-k*0.06)*lerp(0.35,1,smooth(2,7,snT)); u.uHot.value=1-smooth(2.5,7.5,snT); u.uHotCol.value.set(...bbColor(Tph)); u.uSynch.value=0.2; u.uTime.value=simTime; });
+      setShells(R*1.18, smooth(1,5,snT)*lerp(0.35,1,smooth(2,7,snT))*(1-smooth(7,10,snT)*0.5), 1-smooth(2.5,7.5,snT), bbColor(Tph), 0.2);
+      neb={R:R*1.25,int:smooth(6,10,snT)*0.6,dust:0,pwn:0};
       hud.temp=`${Math.round(Tph).toLocaleString()} K`; hud.tempLabel='T<sub>phot</sub>'; hud.epoch=`+${Math.round(snT*14)} d`; hud.size=`${Math.round(R/8.2*1050).toLocaleString()} R☉ (photosphere)`;
       light=lerp(30,8,smooth(0,6,snT))*(st.alpha*0.8+0.2); lightC=bbColor(Tph);
       expoTarget=lerp(0.32,0.7,smooth(0,7,snT));
     }
     camTarget={dist:lerp(85,120,smooth(0.2,1,pP)),pitch:0.24};
     if(pP>=1) advance();
-  } else if(P===3){ // neutron star in its remnant
-    const snT=PHASE_DUR[2]*0.91+phaseTime;
-    nsGroup.visible=true; const t=ease(pP);
-    const R=8.2+3.3*Math.pow(snT,1.05);
-    ejecta.visible=true; ejecta.scale.setScalar(R);
-    ejecta.children.forEach((m,k)=>{ const u=m.material.uniforms; u.uInt.value=(0.3-k*0.06)*lerp(1,0.55,pP); u.uHot.value=0; u.uSynch.value=1.0; u.uTime.value=simTime; });
-    const period=lerp(0.012,0.033,t);
-    nsGroup.userData.beamAngle=(nsGroup.userData.beamAngle||0)+dt*2*Math.PI/period*0.012;
-    nsGroup.userData.piv.rotation.y=nsGroup.userData.beamAngle;
-    // lighthouse: beam axis vs line of sight
-    const ax=new THREE.Vector3(0,1,0).applyEuler(new THREE.Euler(0,nsGroup.userData.beamAngle,0.52,'YXZ'));
-    const los=camera.position.clone().normalize(); const al=Math.abs(ax.dot(los));
-    const pulse=Math.pow(smooth(0.93,1.0,al),2);
-    nsGroup.userData.beamMats.forEach(m=>{ m.uniforms.uA.value=0.22+pulse*0.8; m.uniforms.uTime.value=simTime; });
-    nsGroup.userData.fieldMats.forEach(m=>{ m.uniforms.uA.value=0.55; m.uniforms.uTime.value=simTime; });
-    nsGroup.userData.core.material.uniforms.uBright.value=5.5*(1+pulse*1.5);
-    nsGroup.userData.core.material.uniforms.uTime.value=simTime;
+  } else if(P===PH.neb){ // supernova remnant: emission nebula with dust
+    const snT=SN_END+phaseTime, R=shellR(snT), e=smooth(0,1,pP);
+    setShells(R*1.1,0.5*(1-smooth(0,0.25,pP)),0,null,0.6);
+    neb={R:R*1.2,int:lerp(0.6,1,smooth(0,0.2,pP)),dust:smooth(0.1,0.7,pP),pwn:smooth(0.2,0.8,pP)};
+    nsGroup.visible=true; nsGroup.scale.setScalar(1); pulsar(dt,0.012,0.6);
+    const yrs=Math.round(lerpLog(1,1000,e));
+    hud.massSun=PHYS.NS_MASS; hud.tempLabel='T<sub>e</sub> (gas)'; hud.temp='≈ 10⁴ K, shock 10⁷ K';
+    hud.size=`Ø ${(lerp(0.3,4.2,e)).toFixed(1)} pc`; hud.epoch=`+${yrs} yr`; hud.spin='P = 12.0 ms'; hud.z=`v<sub>ej</sub> ≈ ${Math.round(lerp(9000,4000,e)).toLocaleString()} km/s`;
+    light=0.5; lightC=[0.8,0.6,0.7];
+    camTarget={dist:lerp(140,R*3.1,smooth(0,0.6,pP)),pitch:lerp(0.24,0.42,e)}; expoTarget=0.85;
+    if(pP>=1) advance();
+  } else if(P===PH.ns){ // neutron star inside its remnant
+    const snT=SN_END+PHASE_DUR[PH.neb]+phaseTime, R=shellR(snT), t=ease(pP);
+    neb={R:R*1.2,int:lerp(1,0.75,pP),dust:1,pwn:1};
+    nsGroup.visible=true;
+    const period=lerp(0.012,0.033,t); const pulse=pulsar(dt,period,1);
     lensM=PHYS.NS_MASS/PHYS.M_BH*lerp(1,PHYS.TOV_LIMIT/PHYS.NS_MASS,t);
     hud.massSun=lerp(PHYS.NS_MASS,PHYS.TOV_LIMIT,t); hud.tempLabel='T<sub>surf</sub>'; hud.temp=`${sci(lerpLog(1e11,8e9,t))} K`; hud.size=`R = ${PHYS.NS_RADIUS_KM} km`;
-    hud.spin=`P = ${(period*1000).toFixed(1)} ms`; hud.epoch=`+${Math.round(snT*14)} d`;
+    hud.spin=`P = ${(period*1000).toFixed(1)} ms`; hud.epoch=`+${Math.round(lerpLog(1000,4000,pP)).toLocaleString()} yr`;
     hud.z=`z(surface) = ${(1/Math.sqrt(1-2*hud.massSun*PHYS.KM_PER_MSUN/PHYS.NS_RADIUS_KM)-1).toFixed(2)}`;
     light=1.2; lightC=[0.7,0.78,1];
     if(pP>0.9){ pipe.flash=Math.max(pipe.flash,(pP-0.9)/0.1*1.6); pipe.flashCol.set(0.8,0.85,1); nsGroup.scale.setScalar(Math.max(0.05,1-(pP-0.9)/0.1)); } else nsGroup.scale.setScalar(1);
     camTarget={dist:lerp(24,20,t),pitch:0.22}; expoTarget=0.75;
     if(pP>=1) advance();
-  } else if(P===4){ // black hole forms; fallback accretion
+  } else if(P===PH.bh){ // collapse to a Kerr hole, fallback accretion
     const t=ease(pP);
+    if(!sn.bhFired){ sn.bhFired=true; Score.hit('collapse'); }
     const Msun=lerp(PHYS.TOV_LIMIT,PHYS.M_BH,smooth(0,0.7,pP)); bh.M=Msun/PHYS.M_BH; bh.spin=PHYS.SPIN;
     bh.disk=smooth(0.08,0.55,pP); bh.diskOut=lerp(5,15,smooth(0.05,0.8,pP));
-    const snT=PHASE_DUR[2]*0.91+PHASE_DUR[3]+phaseTime;
-    ejecta.visible=pP<0.7; ejecta.scale.setScalar(8.2+3.3*Math.pow(snT,1.05));
-    ejecta.children.forEach((m,k)=>{ m.material.uniforms.uInt.value=(0.3-k*0.06)*0.55*(1-smooth(0,0.7,pP)); m.material.uniforms.uTime.value=simTime; });
-    if(phaseTime<0.08){ pipe.flash=Math.max(pipe.flash,1.4); }
-    hud.massSun=Msun; hud.tempLabel='T<sub>disk</sub>'; hud.temp=bh.disk>0.05?`${sci(PHYS.DISK_TMAX_TRUE)} K (X-ray)`:'—';
+    const snT=SN_END+PHASE_DUR[PH.neb]+PHASE_DUR[PH.ns]+phaseTime;
+    neb={R:shellR(snT)*1.2,int:0.75*(1-smooth(0,0.6,pP)),dust:1,pwn:1-smooth(0,0.1,pP)};
+    if(phaseTime<0.08) pipe.flash=Math.max(pipe.flash,1.4);
+    hud.massSun=Msun; hud.tempLabel='T<sub>disk</sub>'; hud.temp=bh.disk>0.05?`${sci(PHYS.DISK_TMAX_TRUE)} K (X-ray)`:'n/a';
     hud.size=`r₊ = ${(horizon(PHYS.SPIN)*Msun*PHYS.KM_PER_MSUN).toFixed(1)} km`; hud.epoch=`fallback +${Math.round(pP*40)} d`;
     hud.spin=`a/M = ${PHYS.SPIN.toFixed(2)}`; hud.z=`z(ISCO) = ${iscoRedshift(PHYS.SPIN).toFixed(3)}`;
     light=1.5*bh.disk; lightC=bbColor(9000);
     camTarget={dist:lerp(26,44,t),pitch:0.16}; expoTarget=lerp(0.8,0.9,t);
     if(pP>=1) advance();
-  } else if(P===5){ // jets
+  } else if(P===PH.jet){ // Blandford-Znajek jets
     bh.M=1; bh.spin=PHYS.SPIN; bh.disk=1; bh.diskOut=15; jetPower=ease(Math.min(1,pP*1.6));
     hud.massSun=PHYS.M_BH; hud.tempLabel='T<sub>disk</sub>'; hud.temp=`${sci(PHYS.DISK_TMAX_TRUE)} K (X-ray)`;
     hud.size=`r₊ = ${(horizon(PHYS.SPIN)*PHYS.M_BH*PHYS.KM_PER_MSUN).toFixed(1)} km`; hud.epoch=`+${(0.2+pP*2).toFixed(1)} yr`;
@@ -1279,16 +1426,16 @@ function updatePhase(dt){
     light=1.6; lightC=bbColor(9000);
     camTarget={dist:62,pitch:0.42}; expoTarget=0.9;
     if(pP>=1) advance();
-  } else if(P===6){ // tidal disruption of planets
+  } else if(P===PH.acc){ // tidal disruption of the planets
     bh.M=1; bh.spin=PHYS.SPIN; bh.disk=1; bh.diskOut=15; jetPower=1-smooth(0,4,phaseTime);
     let add=0; planets.forEach(p=>{ if(p.state==='consumed') add+=p.def.gmass*3.0e-6; });
     hud.massSun=PHYS.M_BH+add; hud.tempLabel='T<sub>disk</sub>'; hud.temp=`${sci(PHYS.DISK_TMAX_TRUE)} K (X-ray)`;
     hud.size=`r₊ = ${(horizon(PHYS.SPIN)*PHYS.M_BH*PHYS.KM_PER_MSUN).toFixed(1)} km`; hud.epoch=`+${(2.2+phaseTime*0.15).toFixed(1)} yr`;
     hud.spin=`a/M = ${PHYS.SPIN.toFixed(2)}`; hud.z=`z(ISCO) = ${iscoRedshift(PHYS.SPIN).toFixed(3)}`;
     light=1.6; lightC=bbColor(9000);
-    camTarget={dist:58,pitch:0.34}; expoTarget=0.9;
-    if(planets.every(p=>p.state!=='ok') || phaseTime>120) advance();
-  } else if(P===7){ // Hawking evaporation over 10^70 yr
+    camTarget={dist:46,pitch:0.5}; expoTarget=0.9;
+    if(planets.every(p=>p.state==='consumed'||p.state==='engulfed') || phaseTime>150) advance();
+  } else if(P===PH.hawk){ // Hawking evaporation over 10^70 yr
     const x=pP;
     const Msun=PHYS.M_BH*Math.pow(10,-20*x);
     const a=PHYS.SPIN*(1-smooth(0,0.35,x));
@@ -1301,30 +1448,33 @@ function updatePhase(dt){
     const rp=horizon(a)*Msun*PHYS.KM_PER_MSUN*1000;
     hud.size=`r₊ = ${rp>=1000?sci(rp/1000)+' km':sci(rp)+' m'}`;
     hud.epoch=`τ<sub>left</sub> ≈ 10${sup((Math.log10(PHYS.T_EVAP_10MSUN_YR)-60*x).toFixed(1))} yr`;
-    hud.spin=`a/M = ${a.toFixed(3)}`; hud.z='—';
+    hud.spin=`a/M = ${a.toFixed(3)}`; hud.z='n/a';
     light=1.6*bh.disk; lightC=bbColor(9000);
     if(x>0.92){ pipe.flash=Math.max(pipe.flash,(x-0.92)/0.08*0.5); pipe.flashCol.set(0.8,0.86,1); }
     camTarget={dist:lerp(46,22,smooth(0.2,0.95,x)),pitch:0.18}; expoTarget=lerp(0.9,1.3,smooth(0.1,0.5,x));
     if(pP>=1) advance();
-  } else if(P===8){ // final burst
+  } else if(P===PH.die){ // final burst
     skyFade=0; const t=phaseTime;
     if(t<0.25){ bh.M=0; bh.hawkT=1e12; bh.glow=3+t*30; } else { bh.glow=Math.max(0,3*(1-(t-0.25)*3)); bh.hawkT=1e12; }
+    if(t>0.22&&!sn.dieFired){ sn.dieFired=true; Score.hit('burst'); }
     if(t>0.22&&t<0.3){ pipe.flash=Math.max(pipe.flash,3.2); pipe.flashCol.set(0.8,0.88,1); shake=Math.max(shake,1.2); }
     const tt=Math.max(0,t-0.25);
-    explPts.visible=t>0.25; explPts.material.uniforms.uTime.value=tt; explPts.material.uniforms.uAlpha.value=1-smooth(0,PHASE_DUR[8],tt)*0.4;
-    lightShell.visible=t>0.25; lightShell.scale.setScalar(0.5+tt*22); const lu=lightShell.material.uniforms; lu.uInt.value=0.16*(1-smooth(0,PHASE_DUR[8],tt)); lu.uHot.value=1; lu.uHotCol.value.set(0.6,0.75,1); lu.uTime.value=simTime;
-    hud.massSun=0; hud.tempLabel='T<sub>Hawking</sub>'; hud.temp=t<0.25?'>10¹⁵ K':'—'; hud.size='r₊ → 0'; hud.epoch='τ<sub>left</sub> < 1 s'; hud.spin='a/M = 0';
-    camTarget={dist:lerp(22,70,smooth(0.3,PHASE_DUR[8],t)),pitch:0.25}; expoTarget=0.8;
+    explPts.visible=t>0.25; explPts.material.uniforms.uTime.value=tt; explPts.material.uniforms.uAlpha.value=1-smooth(0,PHASE_DUR[PH.die],tt)*0.4;
+    lightShell.visible=t>0.25; lightShell.scale.setScalar(0.5+tt*22); const lsu=lightShell.material.uniforms; lsu.uInt.value=0.16*(1-smooth(0,PHASE_DUR[PH.die],tt)); lsu.uHot.value=1; lsu.uHotCol.value.set(0.6,0.75,1); lsu.uTime.value=simTime;
+    hud.massSun=0; hud.tempLabel='T<sub>Hawking</sub>'; hud.temp=t<0.25?'>10¹⁵ K':'n/a'; hud.size='r₊ → 0'; hud.epoch='τ<sub>left</sub> < 1 s'; hud.spin='a/M = 0';
+    camTarget={dist:lerp(22,70,smooth(0.3,PHASE_DUR[PH.die],t)),pitch:0.25}; expoTarget=0.8;
     if(pP>=1) advance();
-  } else if(P===9){ // dark era
-    skyFade=0; const tt=PHASE_DUR[8]-0.25+phaseTime;
+  } else if(P===PH.dark){ // dark era
+    skyFade=0; const tt=PHASE_DUR[PH.die]-0.25+phaseTime;
     explPts.visible=true; explPts.material.uniforms.uTime.value=tt; explPts.material.uniforms.uAlpha.value=0.6*(1-smooth(0,0.6,pP));
     dustPts.visible=true; dustPts.material.uniforms.uTime.value=phaseTime; dustPts.material.uniforms.uAlpha.value=smooth(0,0.15,pP)*(1-smooth(0.5,1,pP))*1.2;
     lightShell.visible=pP<0.8; lightShell.scale.setScalar(0.5+tt*22); lightShell.material.uniforms.uInt.value=0.08*(1-smooth(0,0.8,pP));
-    hud.massSun=0; hud.tempLabel='T<sub>radiation</sub>'; hud.temp=`${sci(lerpLog(1e9,30,pP))} K`; hud.size='—'; hud.epoch='≈ 2×10⁷⁰ yr'; hud.spin='—';
+    hud.massSun=0; hud.tempLabel='T<sub>radiation</sub>'; hud.temp=`${sci(lerpLog(1e9,30,pP))} K`; hud.size='n/a'; hud.epoch='≈ 2×10⁷⁰ yr'; hud.spin='n/a';
     camTarget={dist:lerp(60,100,pP),pitch:0.3}; expoTarget=1.2;
     if(pP>=1) advance();
   }
+  const nu=pipe.lensMat.uniforms; nu.uNebR.value=neb.R; nu.uNebInt.value=neb.int; nu.uNebDust.value=neb.dust; nu.uNebPWN.value=neb.pwn;
+  Score.update(P,pP,dt);
 
   // apply star uniforms
   starMesh.visible=coronaMesh.visible=st.visible;
@@ -1347,73 +1497,85 @@ function updatePhase(dt){
   lu.uSpin.value = bh.M>0 ? bh.spin : 0;
   lu.uDiskOpacity.value=bh.disk; lu.uDiskOut.value=bh.diskOut; lu.uDiskIn.value=iscoKerr(bh.spin||0);
   lu.uBend.value=show.lensing?1:0; lu.uSkyFade.value=skyFade; lu.uTime.value=simTime;
-  let boost=0; planets.forEach(p=>{ boost=Math.max(boost,p.flash); }); lu.uDiskBright.value=0.6*(1+boost*2.5);
+  let boost=0; planets.forEach(p=>{ boost=Math.max(boost,p.flash); }); lu.uDiskBright.value=0.6*(1+boost*0.9);
   if(bh.glow>0){ const c=bbColor(Math.min(bh.hawkT,4e4)); lu.uHawkCol.value.set(c[0],c[1],c[2]); lu.uHawkGlow.value=bh.glow; } else lu.uHawkGlow.value=0;
   lu.uRH.value=2.0;
   // exposure (eye adaptation) and camera targets
   pipe.exposure+= (expoTarget-pipe.exposure)*(1-Math.exp(-dt*1.2));
   if(userCamTimer<=0){ camDist+=(camTarget.dist-camDist)*(1-Math.exp(-dt*0.5)); camPitch+=(camTarget.pitch-camPitch)*(1-Math.exp(-dt*0.4)); }
-  // reticle hidden when something big fills the centre
 }
 
+const STAR_MASS=[24,19,15,PHYS.NS_MASS,PHYS.NS_MASS,PHYS.M_BH,PHYS.M_BH,PHYS.M_BH,PHYS.M_BH,0,0];
+const rocheOf=p=>8.5*Math.cbrt(Math.max(p.def.r,0.3));
+const orbitK=M=>0.55*Math.sqrt(Math.max(M,0.3)/24)*Math.pow(11,1.5);
 function updatePlanets(dt){
-  const Mstar=[24,19,15,PHYS.NS_MASS,PHYS.M_BH,PHYS.M_BH,PHYS.M_BH,PHYS.M_BH,0,0][phase];
+  const M=STAR_MASS[phase], K=orbitK(M);
   const lu=pipe.lensMat.uniforms;
   const rin=lu.uDiskIn.value*Math.max(bh.M,0.01);
-  let target=null; if(phase===6) target=planets.find(p=>p.state==='ok');
+  const acc=phase===PH.acc;
+  let target=null;
+  if(acc){ // one planet at a time: the next starts falling once the previous stream has formed
+    const busy=planets.find(p=>(p.state==='ok'&&p.inspiralT>=0)||(p.state==='shred'&&p.shredT<2.4));
+    target=busy?(busy.state==='ok'?busy:null):planets.find(p=>p.state==='ok');
+  }
   planets.forEach((p,i)=>{
-    if(p.state!=='ok'){ p.debris.visible=false; return; }
-    p.orbitLine.visible=show.orbits;
-    const omega=0.55*Math.sqrt(Math.max(Mstar,0.3)/24)*Math.pow(11/Math.max(p.orbit,1),1.5);
-    p.angle+=dt*omega;
-    let stretch=0;
-    if(phase===6){
-      if(p===target){ if(p.inspiralT<0){ p.inspiralT=0; p.r0=p.orbit; }
-        p.inspiralT+=dt; const tau=5.2; p.orbit=Math.max(rin,p.r0*Math.pow(Math.max(0,1-p.inspiralT/tau),0.25));
-        if(p.inspiralT>=tau||p.orbit<=rin*1.02){ consumePlanet(i,'consumed'); return; }
-      }
-      const roche=8.5*Math.cbrt(Math.max(p.def.r,0.3));
-      stretch=smooth(roche,rin,p.orbit);
+    if(p.state==='consumed'||p.state==='engulfed'){ p.grp.visible=false; p.debris.visible=false; p.orbitLine.visible=false; return; }
+    p.orbitLine.visible=show.orbits&&p.state==='ok';
+    p.angle+=dt*K*Math.pow(Math.max(p.orbit,1),-1.5);
+    const roche=rocheOf(p);
+    let stretch=0, heat=0, dissolve=0;
+    if(acc&&p===target){ // orbital decay, chirp-like r ∝ (t_c − t)^¼
+      if(p.inspiralT<0){ p.inspiralT=0; p.r0=p.orbit; }
+      p.inspiralT+=dt; const tau=4.2;
+      p.orbit=roche+(p.r0-roche)*Math.pow(Math.max(0,1-p.inspiralT/tau),0.25);
+      stretch=0.3*smooth(roche*1.8,roche,p.orbit);
+      if(p.inspiralT>=tau){ p.state='shred'; p.shredT=0; p.orbit=roche; p.shredAngle=p.angle; Score.hit('tear'); }
     }
+    if(p.state==='shred'){ // tidal disruption: body torn, debris sheared into a stream that falls back as t^-5/3
+      p.shredT+=dt; const s=p.shredT;
+      stretch=smooth(0,1.3,s); heat=smooth(0.2,1.6,s); dissolve=smooth(0.7,2.1,s);
+      const tr=1.4; p.flash=s>tr?Math.min(1.3,1.3*Math.pow(s/tr,-5/3)):0;
+      if(s>tr&&!p.thud){ p.thud=true; Score.hit('feed'); pipe.flash=Math.max(pipe.flash,0.3); pipe.flashCol.set(1,0.9,0.8); }
+      const du=p.debrisMat.uniforms; p.debris.visible=true;
+      du.uTD.value=s; du.uRt.value=roche; du.uTheta0.value=p.shredAngle; du.uRin.value=rin; du.uK.value=K;
+      du.uAlpha.value=smooth(0,0.4,s)*(1-smooth(9,11,s)); du.uLight.value.copy(lightCol); du.uTime.value=simTime;
+      if(s>11){ p.state='consumed'; p.debris.visible=false; p.flash=0; }
+    } else p.debris.visible=false;
+    p.grp.visible=p.state==='ok'||(p.state==='shred'&&p.shredT<2.2);
     p.grp.position.set(Math.cos(p.angle)*p.orbit,0,-Math.sin(p.angle)*p.orbit);
-    p.grp.rotation.y+=dt*(phase===6&&stretch>0?0:0.6);
+    if(stretch<0.05) p.grp.rotation.y+=dt*0.6;
     const toBH=p.grp.position.clone().negate().normalize();
     const u=p.mat.uniforms;
-    u.uStretch.value=ease(stretch); u.uHeat.value=Math.min(1,stretch*1.4); u.uDissolve.value=Math.max(0,stretch-0.6)*2.2;
+    u.uStretch.value=ease(stretch); u.uHeat.value=heat; u.uDissolve.value=dissolve*1.4;
     u.uBHDir.value.copy(toBH.applyQuaternion(p.grp.quaternion.clone().invert())); u.uTime.value=simTime;
     u.uLightPos.value.copy(lightPos); u.uLightCol.value.copy(lightCol);
-    p.rings.forEach(r=>{ if(r.uniforms) r.uniforms.uLightCol.value.copy(lightCol).multiplyScalar(0.3); else r.opacity=Math.min(0.7,0.15+lum3([lightCol.x,lightCol.y,lightCol.z])*0.05)*(1-stretch); });
-    const act=phase===6&&p===target&&p.orbit<20;
-    p.debris.visible=act;
-    if(act){ const dm=p.debrisMat.uniforms; dm.uTime.value=simTime; dm.uPos.value.copy(p.grp.position); dm.uAlpha.value=smooth(20,8,p.orbit)*1.4; dm.uRin.value=rin; }
+    p.rings.forEach(r=>{ if(r.uniforms) r.uniforms.uLightCol.value.copy(lightCol).multiplyScalar(0.3*(1-dissolve)); else r.opacity=Math.min(0.7,0.15+lum3([lightCol.x,lightCol.y,lightCol.z])*0.05)*(1-dissolve); });
   });
-  planets.forEach(p=>{ if(p.flash>0) p.flash=Math.max(0,p.flash-dt*0.7); });
 }
 
 function updateHUD(){
   const M=hud.massSun;
-  setText('v-mass', phase>=8 ? (phase===8&&phaseTime<0.25?'< 10⁸ kg':'0') : (M>=0.01?`${M.toFixed(M<10?3:1)} M☉`:`${sci(M)} M☉ · ${sci(M*1.989e30)} kg`), true);
+  setText('v-mass', phase>=PH.die ? (phase===PH.die&&phaseTime<0.25?'< 10⁸ kg':'0') : (M>=0.01?`${M.toFixed(M<10?3:1)} M☉`:`${sci(M)} M☉ · ${sci(M*1.989e30)} kg`), true);
   setText('v-temp',hud.temp,true); setText('l-temp',hud.tempLabel,true);
-  setText('v-size',hud.size,true); setText('l-size',phase>=4&&phase<=8?'Horizon':(phase===3?'Radius':'Radius'),true);
+  setText('v-size',hud.size,true); setText('l-size',phase>=PH.bh&&phase<=PH.die?'Horizon':(phase===PH.neb?'Diameter':'Radius'),true);
   setText('v-epoch',hud.epoch,true); setText('v-spin',hud.spin,true); setText('v-z',hud.z,true);
   const left=planets.filter(p=>p.state==='ok').length; setText('v-bodies',`${left} / 8`);
   planets.forEach((p,i)=>{
-    const tr=$(`pb-${i}`); const gone=p.state!=='ok';
-    const roche=8.5*Math.cbrt(Math.max(p.def.r,0.3));
-    const warn=!gone&&phase===6&&p.orbit<roche;
-    const txt=gone?(p.state==='engulfed'?'engulfed':'disrupted'):`${(p.orbit/11).toFixed(2)} AU${warn?' · Roche':''}`;
+    const tr=$(`pb-${i}`); const gone=p.state==='consumed'||p.state==='engulfed';
+    const warn=p.state==='shred'||(p.state==='ok'&&phase===PH.acc&&p.inspiralT>=0);
+    const txt=gone?(p.state==='engulfed'?'engulfed':'accreted'):(p.state==='shred'?'tidal stream':`${(p.orbit/11).toFixed(2)} AU${warn?' · falling':''}`);
     const cls=gone?'gone':(warn?'warn':'');
     if(tr.className!==cls) tr.className=cls;
     setText(`pd-${i}`,txt);
   });
-  const durs=PHASE_DUR.map((d,i)=>i===6?40:d);
+  const durs=PHASE_DUR.map((d,i)=>i===PH.acc?40:d);
   const btns=document.querySelectorAll('#tl-track button');
-  let prog = phase===6 ? (planets.filter(p=>p.state==='consumed').length/7) : Math.min(1,phaseTime/durs[phase]);
+  let prog = phase===PH.acc ? (planets.filter(p=>p.state==='consumed').length/7) : Math.min(1,phaseTime/durs[phase]);
   const b=btns[phase]; if(b){ const w=`${(prog*100).toFixed(1)}%`; const bb=b.querySelector('b'); if(bb.style.width!==w) bb.style.width=w; }
 }
 
 function updatePhotons(){
-  photonSystems.forEach(ps=>{ ps.pts.visible=show.photons&&phase<8; if(!ps.pts.visible) return;
+  photonSystems.forEach(ps=>{ ps.pts.visible=show.photons&&phase<PH.die; if(!ps.pts.visible) return;
     const arr=ps.geo.attributes.position.array, N=arr.length/3, m=hud.massSun>0?Math.min(hud.massSun,25):0;
     for(let i=0;i<N;i++){ const par=(i/N+simTime*ps.spd*0.4)%1, a=par*Math.PI*2; const r=4+ps.dist*(0.3+0.7*Math.abs(Math.sin(a*0.5)));
       const defl=m*0.25/(r+1); const ang=a+ps.startA+simTime*0.05+defl;
@@ -1421,9 +1583,7 @@ function updatePhotons(){
     ps.geo.attributes.position.needsUpdate=true; });
 }
 
-// ============================================================================
-// LOOP
-// ============================================================================
+// Loop
 let fpsAcc=0, fpsN=0, fpsT=0;
 const tmpM=new THREE.Matrix4(), vp=new THREE.Matrix4(), fwd=new THREE.Vector3();
 function loop(){ requestAnimationFrame(loop); animate(false); }
@@ -1442,8 +1602,8 @@ function animate(boot){
   if(shake>0){ camera.position.x+=(Math.random()-0.5)*shake*0.5; camera.position.y+=(Math.random()-0.5)*shake*0.5; shake=Math.max(0,shake-raw*1.5); }
   camera.updateMatrixWorld();
   // diagrams
-  fabric.visible=show.fabric&&phase<8;
-  if(fabric.visible){ fabric.material.uniforms.uMass.value=Math.min(hud.massSun,25)*(phase===7?bh.M:1);
+  fabric.visible=show.fabric&&phase<PH.die;
+  if(fabric.visible){ fabric.material.uniforms.uMass.value=Math.min(hud.massSun,25)*(phase===PH.hawk?bh.M:1);
     planets.forEach((p,i)=>fabric.material.uniforms.uWells.value[i].set(p.grp.position.x,p.grp.position.z,p.def.gmass,p.state==='ok'?1:0)); }
   updatePhotons();
   // lens uniforms
@@ -1462,7 +1622,7 @@ function animate(boot){
   if(!boot){ fpsAcc+=raw; fpsN++; fpsT+=raw;
     if(fpsT>2.5){ const fps=fpsN/fpsAcc; fpsAcc=fpsN=fpsT=0;
       if(fps<38 && pixelRatio>0.6) setPixelRatio(Math.max(0.6,pixelRatio-0.2));
-      else if(fps>57 && pixelRatio<Math.min(devicePixelRatio||1,QUALITY.pr)-0.01) setPixelRatio(Math.min(Math.min(devicePixelRatio||1,QUALITY.pr),pixelRatio+0.1)); } }
+      else if(fps>57 && pixelRatio<maxPR()-0.01) setPixelRatio(Math.min(maxPR(),pixelRatio+0.1)); } }
 }
 
 try{ init(); }catch(err){ console.error(err); $('fatal').querySelector('h2').textContent='The simulation failed to start'; $('fatal').querySelector('p').textContent=String(err&&err.message||err); $('fatal').style.display='grid'; $('loader').classList.add('out'); }
