@@ -245,8 +245,8 @@
 // Environment
 const IS_MOBILE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
                   (matchMedia('(pointer:coarse)').matches && Math.min(innerWidth, innerHeight) < 820);
-const QUALITY = IS_MOBILE ? { steps:110, stepK:0.075, neb:22, stars:22000, cube:1024, pr:1.25 }
-                          : { steps:240, stepK:0.045, neb:60, stars:42000, cube:1536, pr:1.5 };
+const QUALITY = IS_MOBILE ? { steps:110, stepK:0.075, neb:32, stars:22000, cube:1024, pr:1.25 }
+                          : { steps:240, stepK:0.045, neb:64, stars:42000, cube:1536, pr:1.5 };
 
 // Blackbody colour: Planck spectrum integrated against CIE 1931 matching functions
 function cmfG(x,mu,s1,s2){ const t=(x-mu)/(x<mu?s1:s2); return Math.exp(-0.5*t*t); }
@@ -273,23 +273,17 @@ function planckRGB(T){
 const lum3 = c => 0.2126*c[0]+0.7152*c[1]+0.0722*c[2];
 function bbColor(T){ const c=planckRGB(T); const l=Math.max(lum3(c),1e-12); return [c[0]/l,c[1]/l,c[2]/l]; }
 
+// Planck colour lookup: RGB chroma plus log10 brightness, 400 K to 10^6 K on a log axis
+const PLANCK_TEX=(()=>{ const N=1024, d=new Uint8Array(N*4);
+  for(let i=0;i<N;i++){ const T=Math.exp(Math.log(400)+(Math.log(1e6)-Math.log(400))*i/(N-1)); const c=planckRGB(T); const m=Math.max(c[0],c[1],c[2],1e-14);
+    d[i*4]=Math.round(c[0]/m*255); d[i*4+1]=Math.round(c[1]/m*255); d[i*4+2]=Math.round(c[2]/m*255); d[i*4+3]=Math.round(Math.max(0,Math.min(1,(Math.log10(m)+14)/17))*255); }
+  const t=new THREE.DataTexture(d,N,1,THREE.RGBAFormat,THREE.UnsignedByteType); t.minFilter=t.magFilter=THREE.LinearFilter; t.wrapS=t.wrapT=THREE.ClampToEdgeWrapping; t.generateMipmaps=false; t.needsUpdate=true; return t; })();
 const BB_GLSL = `
-#define PLANCK_NORM ${PLANCK_NORM.toExponential(8)}
-float cmfG(float x,float mu,float s1,float s2){ float t=(x-mu)/(x<mu?s1:s2); return exp(-0.5*t*t); }
+uniform sampler2D tPlanck;
 vec3 planckRGB(float T){
-  T=max(T,300.0);
-  vec3 xyz=vec3(0.0);
-  for(int i=0;i<16;i++){
-    float lam=380.0+float(i)*23.0;
-    float x=1.056*cmfG(lam,599.8,37.9,31.0)+0.362*cmfG(lam,442.0,16.0,26.7)-0.065*cmfG(lam,501.1,20.4,26.2);
-    float y=0.821*cmfG(lam,568.8,46.9,40.5)+0.286*cmfG(lam,530.9,16.3,31.1);
-    float z=1.217*cmfG(lam,437.0,11.8,36.0)+0.681*cmfG(lam,459.0,26.0,13.8);
-    float l=lam*1e-3;
-    float B=1.0/(l*l*l*l*l*(exp(min(14387.77/(l*T),80.0))-1.0));
-    xyz+=B*vec3(x,y,z);
-  }
-  vec3 rgb=mat3(3.2406,-0.9689,0.0557, -1.5372,1.8758,-0.2040, -0.4986,0.0415,1.0570)*xyz;
-  return max(rgb*PLANCK_NORM,0.0);
+  float u=clamp((log(max(T,400.0))-5.991465)/7.824046,0.0,1.0);
+  vec4 s=texture2D(tPlanck,vec2((u*1023.0+0.5)/1024.0,0.5));
+  return s.rgb*pow(10.0,s.a*17.0-14.0);
 }
 float lum(vec3 c){ return dot(c,vec3(0.2126,0.7152,0.0722)); }
 `;
@@ -388,6 +382,9 @@ class Pipeline {
     this.sceneRT.depthTexture=new THREE.DepthTexture(w,h);
     this.sceneRT.depthTexture.type = IS_WEBGL2 ? THREE.UnsignedIntType : THREE.UnsignedShortType;
     this.hdrRT=this.rt(w,h,true);
+    if(this.nebRT) this.nebRT.dispose();
+    this.nebRT=this.rt(Math.max(2,Math.round(w/3)),Math.max(2,Math.round(h/3)));   // soft volume: a third of the resolution, upsampled
+    if(this.lensMat) this.lensMat.uniforms.tNeb.value=this.nebRT.texture;
     this.levels=[]; let bw=w>>1, bh=h>>1;
     for(let i=0;i<5;i++){ this.levels.push({a:this.rt(bw,bh),b:this.rt(bw,bh),w:bw,h:bh}); bw=Math.max(1,bw>>1); bh=Math.max(1,bh>>1); }
     if(this.lensMat){ this.lensMat.uniforms.tScene.value=this.sceneRT.texture; this.lensMat.uniforms.tDepth.value=this.sceneRT.depthTexture; this.lensMat.uniforms.uRes.value.set(w,h); }
@@ -439,7 +436,7 @@ class Pipeline {
     const D = `#define MAX_STEPS ${QUALITY.steps}\n#define STEP_K ${QUALITY.stepK.toFixed(3)}\n#define NEB_STEPS ${QUALITY.neb}\n`;
     this.lensMat=new THREE.ShaderMaterial({
       uniforms:{
-        tScene:{value:this.sceneRT.texture}, tDepth:{value:this.sceneRT.depthTexture}, tSky:{value:skyTex},
+        tPlanck:{value:PLANCK_TEX}, tNeb:{value:null}, tScene:{value:this.sceneRT.texture}, tDepth:{value:this.sceneRT.depthTexture}, tSky:{value:skyTex},
         uInvViewProj:{value:new THREE.Matrix4()}, uViewProj:{value:new THREE.Matrix4()},
         uCamPos:{value:new THREE.Vector3()}, uCamFwd:{value:new THREE.Vector3()},
         uNear:{value:0.5}, uFar:{value:3000},
@@ -455,42 +452,7 @@ class Pipeline {
         uniform mat4 uInvViewProj, uViewProj; uniform vec3 uCamPos, uCamFwd;
         uniform float uNear,uFar,uM,uSpin,uBend,uRH,uDiskOpacity,uDiskIn,uDiskOut,uDiskTmax,uDiskBright,uTime,uSkyFade,uHawkGlow,uPR;
         uniform vec3 uHawkCol; uniform vec2 uRes, uBHuv; varying vec2 vUv;
-        uniform float uNebR,uNebInt,uNebDust,uNebPWN;
-        // remnant ray march: line emission from shocked gas, extinction by dust
-        vec4 nebula(vec3 ro, vec3 rd){
-          float R=uNebR; float bq=dot(ro,rd); float h=bq*bq-dot(ro,ro)+R*R;
-          if(h<=0.0) return vec4(0.0,0.0,0.0,1.0);
-          h=sqrt(h); float t0=max(-bq-h,0.0), t1=-bq+h;
-          if(t1<=0.0) return vec4(0.0,0.0,0.0,1.0);
-          float dt=(t1-t0)/float(NEB_STEPS);
-          float t=t0+dt*fract(52.9829189*fract(dot(gl_FragCoord.xy,vec2(0.06711056,0.00583715))));
-          vec3 em=vec3(0.0); float T=1.0; float dl=dt/R;
-          vec3 O3=vec3(0.08,0.60,0.66), Ha=vec3(1.0,0.12,0.19), S2=vec3(1.0,0.40,0.14), Sy=vec3(0.42,0.58,1.0);
-          for(int i=0;i<NEB_STEPS;i++){
-            if(T<0.01) break;
-            vec3 q=(ro+rd*t)/R; float r=length(q);
-            vec3 e=vec3(0.0); float dust=0.0;
-            float pwn=exp(-r*r/0.02)*uNebPWN;
-            if(r>0.38){
-              float warp=fbm3(q*2.2+vec3(1.7,4.1,uTime*0.004));
-              float rr=r+0.19*warp;
-              float finger=snoise(q/r*5.5+3.3)*0.5+0.5;
-              float shell=exp(-pow((rr-0.76-0.14*finger)/(0.09+0.07*finger),2.0));
-              float fil=pow(1.0-abs(snoise(q*4.6+warp*1.6)),5.0);
-              float clump=smoothstep(-0.35,0.6,warp+0.4*snoise(q*7.0));
-              float gas=shell*(0.2+1.9*fil)*(0.35+0.9*clump);
-              float ion=smoothstep(0.68,0.9,rr+0.18*finger-0.08+0.12*snoise(q*1.7+2.0));
-              vec3 lc=mix(O3*1.7,Ha,ion); lc=mix(lc,S2,smoothstep(0.45,0.9,fil)*ion*0.5);
-              e=lc*gas;
-              dust=uNebDust*smoothstep(0.3,0.62,0.5+0.5*snoise(q*2.4+vec3(3.0,1.0,7.0))+0.25*warp-0.3*fil)*exp(-pow((rr-0.7)/0.19,2.0))*14.0;
-              e+=vec3(0.30,0.15,0.07)*dust*0.012*(0.5+0.5*uNebPWN);
-            }
-            e+=Sy*pwn*(0.6+0.8*abs(snoise(q*9.0+uTime*0.05)))*2.4;
-            em+=T*e*dl; T*=exp(-dust*dl);
-            t+=dt;
-          }
-          return vec4(em*3.2*uNebInt, mix(1.0,T,uNebInt));
-        }
+        uniform sampler2D tNeb; uniform float uNebInt;
         const float RINT=22.0; const float RSTART=60.0;
 
         float objDistAt(vec2 uv, vec3 dir){
@@ -612,7 +574,7 @@ class Pipeline {
             if(status>0.5 && status<1.5) acc+=trans*background(outDir,scol,objW,tca*uM);
             col=acc;
           }
-          if(uNebInt>0.001){ vec4 nb=nebula(uCamPos,dir); col=nb.rgb+col*nb.a; }
+          if(uNebInt>0.001){ vec4 nb=texture2D(tNeb,vUv); col=nb.rgb+col*nb.a; }
           // Hawking ember: unresolved point source once the hole is smaller than a pixel
           float pr=uPR; float d2=dot(dpx,dpx)/(pr*pr);
           col+=uHawkCol*uHawkGlow*(exp(-d2/5.0)*3.0+exp(-sqrt(d2)/22.0)*0.25);
@@ -620,12 +582,82 @@ class Pipeline {
         }`
     });
   }
+  initPlain(){ // compositor for phases without a hole: no ray march compiled in at all
+    const L=this.lensMat.uniforms;
+    this.plainMat=new THREE.ShaderMaterial({
+      uniforms:{tScene:L.tScene, tDepth:L.tDepth, tSky:L.tSky, tNeb:L.tNeb, uInvViewProj:L.uInvViewProj, uCamPos:L.uCamPos, uSkyFade:L.uSkyFade, uNebInt:L.uNebInt,
+        uHawkGlow:L.uHawkGlow, uHawkCol:L.uHawkCol, uPR:L.uPR, uRes:L.uRes, uBHuv:L.uBHuv},
+      vertexShader:QUAD_VS, depthTest:false, depthWrite:false, extensions:{shaderTextureLOD:true},
+      fragmentShader:`uniform sampler2D tScene,tDepth,tNeb; uniform samplerCube tSky; uniform mat4 uInvViewProj; uniform vec3 uCamPos;
+        uniform float uSkyFade,uNebInt,uHawkGlow,uPR; uniform vec3 uHawkCol; uniform vec2 uRes,uBHuv; varying vec2 vUv;
+        void main(){
+          vec4 wp=uInvViewProj*vec4(vUv*2.0-1.0,1.0,1.0); wp/=wp.w; vec3 dir=normalize(wp.xyz-uCamPos);
+          vec3 col=texture2D(tScene,vUv).rgb;
+          if(texture2D(tDepth,vUv).x>0.99999) col+=textureCubeLodEXT(tSky,dir,0.0).rgb*uSkyFade;
+          if(uNebInt>0.001){ vec4 nb=texture2D(tNeb,vUv); col=nb.rgb+col*nb.a; }
+          vec2 dpx=(vUv-uBHuv)*uRes; float d2=dot(dpx,dpx)/(uPR*uPR);
+          col+=uHawkCol*uHawkGlow*(exp(-d2/5.0)*3.0+exp(-sqrt(d2)/22.0)*0.25);
+          gl_FragColor=vec4(col,1.0);
+        }`});
+  }
+  initNebula(){
+    const L=this.lensMat.uniforms;
+    this.nebMat=new THREE.ShaderMaterial({
+      uniforms:{uInvViewProj:L.uInvViewProj, uCamPos:L.uCamPos, uTime:L.uTime, uNebR:L.uNebR, uNebInt:L.uNebInt, uNebDust:L.uNebDust, uNebPWN:L.uNebPWN},
+      vertexShader:QUAD_VS, depthTest:false, depthWrite:false,
+      fragmentShader:`#define NEB_STEPS ${QUALITY.neb}\n`+NOISE_GLSL+`uniform mat4 uInvViewProj; uniform vec3 uCamPos; uniform float uTime; varying vec2 vUv;
+        uniform float uNebR,uNebInt,uNebDust,uNebPWN;
+        // remnant ray march: line emission from shocked gas, extinction by dust
+        #define HALF (NEB_STEPS/2)
+        const vec3 O3=vec3(0.08,0.60,0.66), Ha=vec3(1.0,0.12,0.19), S2=vec3(1.0,0.40,0.14), Sy=vec3(0.42,0.58,1.0);
+        // march one stretch of the emitting shell; samples are spent only where gas can exist
+        void seg(vec3 ro, vec3 rd, float ta, float tb, float jit, inout vec3 em, inout float T){
+          float dt=(tb-ta)/float(HALF); if(dt<=0.0) return;
+          float dl=dt/uNebR; float t=ta+dt*jit;
+          for(int i=0;i<HALF;i++){
+            if(T<0.01) break;
+            vec3 q=(ro+rd*t)/uNebR; float r=max(length(q),1e-3);
+            float warp=fbm3(q*2.2+vec3(1.7,4.1,uTime*0.004));
+            float rr=r+0.19*warp;
+            float finger=snoise(q/r*5.5+3.3)*0.5+0.5;
+            float shell=exp(-pow((rr-0.76-0.14*finger)/(0.09+0.07*finger),2.0));
+            float fil=pow(1.0-abs(snoise(q*4.6+warp*1.6)),5.0);
+            float gas=shell*(0.2+1.9*fil)*(0.35+0.9*smoothstep(-0.35,0.6,warp*1.4));
+            float ion=smoothstep(0.68,0.9,rr+0.18*finger-0.08+0.1*warp);
+            vec3 lc=mix(O3*1.7,Ha,ion); lc=mix(lc,S2,smoothstep(0.45,0.9,fil)*ion*0.5);
+            float dust=uNebDust*smoothstep(0.3,0.62,0.5+0.5*snoise(q*2.4+vec3(3.0,1.0,7.0))+0.25*warp-0.3*fil)*exp(-pow((rr-0.7)/0.19,2.0))*14.0;
+            em+=T*(lc*gas+vec3(0.30,0.15,0.07)*dust*0.012*(0.5+0.5*uNebPWN))*dl;
+            T*=exp(-dust*dl); t+=dt;
+          }
+        }
+        vec4 nebula(vec3 ro, vec3 rd){
+          float R=uNebR; float bq=dot(ro,rd); float c0=dot(ro,ro);
+          float h=bq*bq-c0+R*R; if(h<=0.0) return vec4(0.0,0.0,0.0,1.0);
+          h=sqrt(h); float t0=max(-bq-h,0.0), t1=-bq+h; if(t1<=0.0) return vec4(0.0,0.0,0.0,1.0);
+          float jit=fract(sin(dot(gl_FragCoord.xy,vec2(12.9898,78.233)))*43758.5453);
+          vec3 em=vec3(0.0); float T=1.0;
+          float Ri=0.42*R; float hi=bq*bq-c0+Ri*Ri;
+          if(hi>0.0){
+            hi=sqrt(hi); float ti0=-bq-hi, ti1=-bq+hi;
+            if(ti1>0.0){
+              seg(ro,rd,t0,max(ti0,t0),jit,em,T);
+              vec3 qo=ro/R; float qb=dot(qo,rd); float b2=max(dot(qo,qo)-qb*qb,0.0);   // pulsar wind nebula, integrated analytically
+              em+=T*Sy*uNebPWN*2.4*0.25*exp(-b2/0.02)*(0.7+0.6*abs(snoise(rd*40.0+uTime*0.05)));
+              seg(ro,rd,max(ti1,t0),t1,jit,em,T);
+            } else { float m=0.5*(t0+t1); seg(ro,rd,t0,m,jit,em,T); seg(ro,rd,m,t1,jit,em,T); }
+          } else { float m=0.5*(t0+t1); seg(ro,rd,t0,m,jit,em,T); seg(ro,rd,m,t1,jit,em,T); }
+          return vec4(em*3.2*uNebInt, mix(1.0,T,uNebInt));
+        }
+        void main(){ vec4 wp=uInvViewProj*vec4(vUv*2.0-1.0,1.0,1.0); wp/=wp.w; gl_FragColor=nebula(uCamPos,normalize(wp.xyz-uCamPos)); }`});
+    L.tNeb.value=this.nebRT.texture;
+  }
   pass(mat,target){ this.quad.material=mat; renderer.setRenderTarget(target); renderer.render(this.quadScene,this.quadCam); }
   render(){
     renderer.setClearColor(0x000000,0);
     camera.layers.set(LAYER_MAIN);
     renderer.setRenderTarget(this.sceneRT); renderer.clear(true,true,false); renderer.render(scene,camera);
-    this.pass(this.lensMat,this.hdrRT);
+    if(this.lensMat.uniforms.uNebInt.value>0.001) this.pass(this.nebMat,this.nebRT);
+    this.pass(this.lensMat.uniforms.uM.value>1e-4?this.lensMat:this.plainMat,this.hdrRT);
     camera.layers.set(LAYER_OVERLAY);
     renderer.autoClear=false; renderer.setRenderTarget(this.hdrRT); renderer.clearDepth(); renderer.render(scene,camera); renderer.autoClear=true;
     camera.layers.set(LAYER_MAIN);
@@ -712,105 +744,205 @@ function buildSky(){
   return rt.texture;
 }
 
-// Generative score: six-voice pad, sub, shimmer and wind, re-voiced per phase, plus event hits
+// Generative score: string ensemble, formant choir, brass swells, celesta motifs, layered sound design
 const NOTE=n=>{ const m=/^([A-G])(#|b)?(-?\d)$/.exec(n); const k={C:0,D:2,E:4,F:5,G:7,A:9,B:11}[m[1]]+(m[2]==='#'?1:m[2]==='b'?-1:0); return 440*Math.pow(2,(k+(+m[3]+1)*12-69)/12); };
+// per phase: chord progression, string/choir/sub/wind levels, string brightness, choir vowel, celesta density
 const SCORE=[
-  {ch:['D2','A2','D3','F3','E4','A4'],   cut:900,  pad:0.16, sub:0.10, shim:0.03, wind:0.00},
-  {ch:['Bb1','F2','D3','A3','C4','F4'],  cut:1300, pad:0.18, sub:0.13, shim:0.03, wind:0.01},
-  {ch:['C#2','G2','C#3','E3','G3','A#3'],cut:650,  pad:0.17, sub:0.16, shim:0.02, wind:0.03},
-  {ch:['F2','C3','A3','E4','G4','B4'],   cut:1900, pad:0.19, sub:0.09, shim:0.07, wind:0.05},
-  {ch:['E2','B2','E3','G3','F#4','B4'],  cut:1200, pad:0.15, sub:0.10, shim:0.05, wind:0.03},
-  {ch:['C2','G2','Eb3','G3','D4','Bb4'], cut:700,  pad:0.17, sub:0.20, shim:0.03, wind:0.02},
-  {ch:['C2','G2','Eb3','Bb3','D4','G4'], cut:1500, pad:0.18, sub:0.18, shim:0.05, wind:0.03},
-  {ch:['Ab1','Eb2','C3','G3','Bb3','Eb4'],cut:1150,pad:0.18, sub:0.18, shim:0.04, wind:0.03},
-  {ch:['E3','B3','E4','F#4','B4','D#5'], cut:1600, pad:0.14, sub:0.03, shim:0.06, wind:0.00},
-  {ch:['E3','B3','E4','F#4','B4','D#5'], cut:4000, pad:0.28, sub:0.05, shim:0.05, wind:0.07},
-  {ch:['A3','E4','A4','B4','C#5','E5'],  cut:900,  pad:0.07, sub:0.00, shim:0.03, wind:0.00},
+  {prog:[['D2','A2','F3','A3','E4','A4'],['Bb1','F2','D3','A3','D4','F4']], str:0.15, choir:0.00, sub:0.08, wind:0.00, cut:2200, vowel:'ah', bells:0.6},
+  {prog:[['Bb1','F2','D3','F3','C4','D4'],['G1','D2','Bb2','F3','A3','D4']], str:0.17, choir:0.05, sub:0.11, wind:0.01, cut:1700, vowel:'oh', bells:0.3},
+  {prog:[['C#2','G#2','E3','G3','A#3','C#4']], str:0.13, choir:0.00, sub:0.13, wind:0.03, cut:900, vowel:'oh', bells:0},
+  {prog:[['F2','C3','A3','E4','G4','C5'],['D2','A2','F3','C4','E4','A4']], str:0.16, choir:0.15, sub:0.07, wind:0.05, cut:2600, vowel:'ah', bells:0.8},
+  {prog:[['E2','B2','G3','B3','F#4','B4'],['C2','G2','E3','B3','D4','G4']], str:0.13, choir:0.06, sub:0.08, wind:0.03, cut:1800, vowel:'oo', bells:0.5},
+  {prog:[['C2','G2','Eb3','G3','D4','G4'],['Ab1','Eb2','C3','G3','Bb3','Eb4']], str:0.16, choir:0.09, sub:0.17, wind:0.02, cut:1100, vowel:'oh', bells:0},
+  {prog:[['C2','G2','Eb3','Bb3','D4','G4'],['F2','C3','Ab3','C4','Eb4','G4']], str:0.18, choir:0.10, sub:0.15, wind:0.03, cut:2400, vowel:'ah', bells:0.2},
+  {prog:[['Ab1','Eb2','C3','G3','Bb3','Eb4'],['F1','C2','Ab2','Eb3','G3','C4']], str:0.17, choir:0.07, sub:0.16, wind:0.03, cut:1500, vowel:'oh', bells:0.2},
+  {prog:[['E3','B3','F#4','G#4','B4','D#5'],['C#3','G#3','E4','B4','C#5','F#5']], str:0.10, choir:0.10, sub:0.02, wind:0.00, cut:2000, vowel:'oo', bells:0.4},
+  {prog:[['E3','B3','F#4','G#4','B4','D#5']], str:0.20, choir:0.14, sub:0.06, wind:0.06, cut:5000, vowel:'ah', bells:0},
+  {prog:[['A3','E4','B4','C#5','E5','A5']], str:0.05, choir:0.05, sub:0.00, wind:0.00, cut:1400, vowel:'oo', bells:0.15},
 ];
-const Score={ ctx:null, on:false, ready:false, acc:0, lastP:-1, chordKey:'',
+const VOWELS={ah:[800,1150,2900], oh:[450,800,2830], oo:[325,700,2530]};
+const Score={ ctx:null, on:false, ready:false, gestured:false, acc:0, lastP:-1, chordIdx:0, chordT:0, chord:null, bellT:3,
   init(){
     const C=window.AudioContext||window.webkitAudioContext; if(!C) return false;
     const c=this.ctx=new C();
+    // mastering: high-pass, glue compression, brick-wall limiter
     this.master=c.createGain(); this.master.gain.value=0;
-    const comp=c.createDynamicsCompressor(); comp.threshold.value=-16; comp.ratio.value=3; comp.attack.value=0.02; comp.release.value=0.5;
-    this.master.connect(comp); comp.connect(c.destination);
-    const n=c.sampleRate*4, nb=c.createBuffer(2,n,c.sampleRate);
-    for(let ch=0;ch<2;ch++){ const d=nb.getChannelData(ch); for(let i=0;i<n;i++) d[i]=Math.random()*2-1; }
-    this.noiseBuf=nb;
-    this.verb=c.createConvolver(); this.verb.buffer=this.impulse(7,2.4);
-    const wet=c.createGain(); wet.gain.value=0.85; this.verb.connect(wet); wet.connect(this.master);
-    this.bus=c.createGain(); this.bus.connect(this.master); this.bus.connect(this.verb);
-    this.filt=c.createBiquadFilter(); this.filt.type='lowpass'; this.filt.frequency.value=900; this.filt.Q.value=0.5;
-    this.pad=c.createGain(); this.pad.gain.value=0; this.filt.connect(this.pad); this.pad.connect(this.bus);
-    this.voices=[];
-    for(let i=0;i<6;i++){
-      const g=c.createGain(); g.gain.value=0.16;
-      const oscs=[-7,7].map(dc=>{ const o=c.createOscillator(); o.type=i<2?'triangle':'sawtooth'; o.detune.value=dc+(Math.random()-0.5)*5; o.connect(g); o.start(); return o; });
-      const l=c.createOscillator(); l.frequency.value=0.03+Math.random()*0.07; const lg=c.createGain(); lg.gain.value=0.07; l.connect(lg); lg.connect(g.gain); l.start();
-      if(c.createStereoPanner){ const p=c.createStereoPanner(); p.pan.value=(i/5-0.5)*1.3; g.connect(p); p.connect(this.filt); } else g.connect(this.filt);
-      this.voices.push({oscs,g});
-    }
-    this.subO=c.createOscillator(); this.subO.type='sine'; this.subG=c.createGain(); this.subG.gain.value=0; this.subO.connect(this.subG); this.subG.connect(this.master); this.subO.start();
-    this.shimG=c.createGain(); this.shimG.gain.value=0; this.shimG.connect(this.verb);
-    this.shim=[0,1,2].map(k=>{ const o=c.createOscillator(); o.type='sine'; const g=c.createGain(); g.gain.value=0.25; const l=c.createOscillator(); l.frequency.value=0.05+k*0.031; const lg=c.createGain(); lg.gain.value=0.25; l.connect(lg); lg.connect(g.gain); l.start(); o.connect(g); g.connect(this.shimG); o.start(); return o; });
-    const ns=c.createBufferSource(); ns.buffer=nb; ns.loop=true;
-    this.windF=c.createBiquadFilter(); this.windF.type='bandpass'; this.windF.frequency.value=420; this.windF.Q.value=0.8;
-    this.windG=c.createGain(); this.windG.gain.value=0; ns.connect(this.windF); this.windF.connect(this.windG); this.windG.connect(this.bus); ns.start();
-    const wl=c.createOscillator(); wl.frequency.value=0.06; const wlg=c.createGain(); wlg.gain.value=260; wl.connect(wlg); wlg.connect(this.windF.frequency); wl.start();
-    this.ready=true; this.lastP=-1; this.chordKey='';
+    const hp=c.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=24;
+    const glue=c.createDynamicsCompressor(); glue.threshold.value=-20; glue.ratio.value=2.5; glue.knee.value=8; glue.attack.value=0.03; glue.release.value=0.6;
+    const lim=c.createDynamicsCompressor(); lim.threshold.value=-4; lim.knee.value=0; lim.ratio.value=20; lim.attack.value=0.002; lim.release.value=0.2;
+    this.master.connect(hp); hp.connect(glue); glue.connect(lim); lim.connect(c.destination);
+    this.noise={white:this.noiseBuf('white'), pink:this.noiseBuf('pink'), brown:this.noiseBuf('brown')};
+    this.verb=c.createConvolver(); this.verb.buffer=this.hall(6.5);
+    const wet=c.createGain(); wet.gain.value=0.9; this.verb.connect(wet); wet.connect(this.master);
+    // music mix (ducked under explosions) and an effects bus
+    this.music=c.createGain(); this.music.gain.value=1.5; this.music.connect(this.master);
+    const send=c.createGain(); send.gain.value=0.55; this.music.connect(send); send.connect(this.verb);
+    this.fx=c.createGain(); this.fx.gain.value=0.45; this.fx.connect(this.master);
+    const fxs=c.createGain(); fxs.gain.value=0.7; this.fx.connect(fxs); fxs.connect(this.verb);
+    // strings section
+    this.strBus=c.createGain(); this.strF=c.createBiquadFilter(); this.strF.type='lowpass'; this.strF.frequency.value=2000; this.strF.Q.value=0.4;
+    this.strG=c.createGain(); this.strG.gain.value=0; this.strBus.connect(this.strF); this.strF.connect(this.strG); this.strG.connect(this.music);
+    const re=new Float32Array(40), im=new Float32Array(40);
+    for(let k=1;k<40;k++) im[k]=(1/k)*Math.exp(-k/16)*(k%2?1:0.75);
+    this.bowWave=c.createPeriodicWave(re,im);
+    // choir through a vowel formant bank
+    this.choirBus=c.createGain(); this.choirG=c.createGain(); this.choirG.gain.value=0;
+    this.form=VOWELS.ah.map((f,i)=>{ const b=c.createBiquadFilter(); b.type='bandpass'; b.frequency.value=f; b.Q.value=9; const g=c.createGain(); g.gain.value=[1,0.55,0.22][i]*3; this.choirBus.connect(b); b.connect(g); g.connect(this.choirG); return b; });
+    this.choirG.connect(this.music);
+    // sub and nebular wind
+    this.subO=c.createOscillator(); this.subO.type='sine'; this.subO.frequency.value=36; this.subG=c.createGain(); this.subG.gain.value=0; this.subO.connect(this.subG); this.subG.connect(this.music); this.subO.start();
+    const ws=c.createBufferSource(); ws.buffer=this.noise.pink; ws.loop=true;
+    this.windF=c.createBiquadFilter(); this.windF.type='bandpass'; this.windF.frequency.value=500; this.windF.Q.value=1.2;
+    this.windG=c.createGain(); this.windG.gain.value=0; ws.connect(this.windF); this.windF.connect(this.windG); this.windG.connect(this.music); ws.start();
+    const wl=c.createOscillator(); wl.frequency.value=0.05; const wlg=c.createGain(); wlg.gain.value=320; wl.connect(wlg); wlg.connect(this.windF.frequency); wl.start();
+    // saturation for the weight of explosions
+    this.sat=c.createWaveShaper(); const cv=new Float32Array(2048); for(let i=0;i<2048;i++){ const x=i/1024-1; cv[i]=Math.tanh(x*2.2)/Math.tanh(2.2); } this.sat.curve=cv; this.sat.oversample='4x';
+    this.sat.connect(this.fx);
+    this.ready=true; this.lastP=-1; this.chord=null;
     return true;
   },
-  impulse(sec,decay){ const c=this.ctx, n=Math.floor(c.sampleRate*sec), b=c.createBuffer(2,n,c.sampleRate);
-    for(let ch=0;ch<2;ch++){ const d=b.getChannelData(ch); for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/n,decay); } return b; },
+  noiseBuf(kind){
+    const c=this.ctx, n=c.sampleRate*4, b=c.createBuffer(2,n,c.sampleRate);
+    for(let ch=0;ch<2;ch++){ const d=b.getChannelData(ch); let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0,last=0;
+      for(let i=0;i<n;i++){ const w=Math.random()*2-1;
+        if(kind==='white') d[i]=w;
+        else if(kind==='pink'){ b0=0.99886*b0+w*0.0555179; b1=0.99332*b1+w*0.0750759; b2=0.969*b2+w*0.153852; b3=0.8665*b3+w*0.3104856; b4=0.55*b4+w*0.5329522; b5=-0.7616*b5-w*0.016898; d[i]=(b0+b1+b2+b3+b4+b5+b6+w*0.5362)*0.11; b6=w*0.115926; }
+        else { last=(last+0.02*w)/1.02; d[i]=last*3.5; } } }
+    return b;
+  },
+  hall(sec){ // stereo hall: early reflections then a tail that darkens as it decays
+    const c=this.ctx, n=Math.floor(c.sampleRate*sec), b=c.createBuffer(2,n,c.sampleRate);
+    for(let ch=0;ch<2;ch++){ const d=b.getChannelData(ch); let lp=0;
+      for(let i=0;i<n;i++){ const t=i/c.sampleRate; const a=Math.min(1,0.05+t*90);
+        lp+= (Math.random()*2-1-lp)*(0.95*Math.exp(-t*0.9)+0.04);
+        d[i]=lp*a*Math.exp(-t*(6.9/sec)); }
+      for(let r=0;r<14;r++){ const at=Math.floor((0.008+Math.random()*0.07)*c.sampleRate); d[at]+=(Math.random()*2-1)*0.6*(1-r/14); } }
+    return b;
+  },
   setOn(v){
     this.on=v;
     if(v&&!this.ready){ if(!this.gestured){ this.mark(); return; } if(!this.init()) return; }
-    this.on=v; const b=$('btn-sound'); if(b){ b.setAttribute('aria-pressed',String(v)); b.setAttribute('aria-label',v?'Mute score':'Play score'); }
+    this.mark();
     if(!this.ready) return;
-    const t=this.ctx.currentTime; this.master.gain.cancelScheduledValues(t); this.master.gain.setTargetAtTime(v?0.9:0,t,v?1.5:0.25);
+    const t=this.ctx.currentTime; this.master.gain.cancelScheduledValues(t); this.master.gain.setTargetAtTime(v?1.0:0,t,v?1.5:0.25);
     if(v){ if(!isPaused) this.ctx.resume().then(()=>this.mark()); this.lastP=-1; }
-    setTimeout(()=>this.mark(),300); this.mark();
+    setTimeout(()=>this.mark(),300);
   },
   unlock(){ this.gestured=true; if(!this.on) return; if(!this.ready){ this.setOn(true); return; } if(this.ctx.state!=='running'&&!isPaused) this.ctx.resume().then(()=>this.mark()); },
-  mark(){ const b=$('btn-sound'); if(!b) return; b.setAttribute('aria-pressed',String(this.on)); b.classList.toggle('wait', this.on&&(!this.ctx||this.ctx.state!=='running')); },
+  mark(){ const b=$('btn-sound'); if(!b) return; b.setAttribute('aria-pressed',String(this.on)); b.setAttribute('aria-label',this.on?'Mute score':'Play score'); b.classList.toggle('wait', this.on&&(!this.ctx||this.ctx.state!=='running')); },
   suspend(p){ if(!this.ready) return; if(p) this.ctx.suspend(); else if(this.on) this.ctx.resume(); },
-  chord(notes,glide){
-    const key=notes.join(); if(key===this.chordKey) return; this.chordKey=key; const t=this.ctx.currentTime;
-    notes.forEach((nm,i)=>{ const f=NOTE(nm); this.voices[i].oscs.forEach(o=>{ o.frequency.cancelScheduledValues(t); o.frequency.setValueAtTime(o.frequency.value,t); o.frequency.exponentialRampToValueAtTime(f,t+glide); }); });
-    const root=NOTE(notes[0]); this.subO.frequency.setTargetAtTime(root/2>=27?root/2:root,t,glide/3);
-    this.shim.forEach((o,k)=>o.frequency.setTargetAtTime(NOTE(notes[notes.length-1-(k%2)])*(k===2?4:2),t,glide/3));
+  // a chord is a fresh set of players: it swells in while the previous one releases
+  playChord(notes,attack){
+    const c=this.ctx, t=c.currentTime, out=c.createGain(); out.gain.setValueAtTime(0,t); out.gain.linearRampToValueAtTime(1,t+attack);
+    const oscs=[];
+    notes.forEach((nm,i)=>{ const f=NOTE(nm);
+      const ng=c.createGain(); ng.gain.value=(i===0?0.8:1)/Math.sqrt(notes.length);
+      const pan=c.createStereoPanner?c.createStereoPanner():null;
+      if(pan){ pan.pan.value=(i/(notes.length-1)-0.5)*1.4; ng.connect(pan); pan.connect(out); } else ng.connect(out);
+      [-11,-4,4,11].forEach(dc=>{ const o=c.createOscillator(); o.setPeriodicWave(this.bowWave); o.frequency.value=f; o.detune.value=dc+(Math.random()-0.5)*4;
+        const vib=c.createOscillator(); vib.frequency.value=4.6+Math.random()*1.2; const vg=c.createGain(); vg.gain.value=3+Math.random()*2; vib.connect(vg); vg.connect(o.detune); vib.start(t);
+        const og=c.createGain(); og.gain.value=0.25; o.connect(og); og.connect(ng); o.start(t); oscs.push(o,vib); });
+      if(i>=2){ [-6,6].forEach(dc=>{ const o=c.createOscillator(); o.type='sawtooth'; o.frequency.value=f*(i>=4?1:2); o.detune.value=dc;
+        const og=c.createGain(); og.gain.value=0.12; o.connect(og); og.connect(this.choirBus); o.start(t); oscs.push(o); }); }
+    });
+    out.connect(this.strBus);
+    if(this.chord){ const old=this.chord; old.out.gain.cancelScheduledValues(t); old.out.gain.setValueAtTime(old.out.gain.value,t); old.out.gain.linearRampToValueAtTime(0,t+attack*1.3);
+      old.oscs.forEach(o=>{ try{ o.stop(t+attack*1.3+0.1); }catch(e){} }); }
+    this.chord={out,oscs,notes};
+    const root=NOTE(notes[0]); this.subO.frequency.setTargetAtTime(root>=55?root/2:root,t,1.2);
   },
-  mood(m,tc){ const t=this.ctx.currentTime;
-    this.filt.frequency.setTargetAtTime(m.cut,t,tc); this.pad.gain.setTargetAtTime(m.pad,t,tc); this.subG.gain.setTargetAtTime(m.sub,t,tc);
-    this.shimG.gain.setTargetAtTime(m.shim,t,tc); this.windG.gain.setTargetAtTime(m.wind,t,tc); },
+  layers(m,tc){ const t=this.ctx.currentTime;
+    this.strG.gain.setTargetAtTime(m.str,t,tc); this.strF.frequency.setTargetAtTime(m.cut,t,tc);
+    this.choirG.gain.setTargetAtTime(m.choir*0.4,t,tc); this.subG.gain.setTargetAtTime(m.sub,t,tc); this.windG.gain.setTargetAtTime(m.wind,t,tc);
+    VOWELS[m.vowel].forEach((f,i)=>this.form[i].frequency.setTargetAtTime(f,t,2.5)); },
   update(P,pP,dt){
-    if(!this.ready||!this.on) return;
-    this.acc+=dt; if(this.acc<0.25&&P===this.lastP) return; this.acc=0; this.lastP=P;
-    let sc=Object.assign({},SCORE[P]), tc=1.6, glide=4;
-    if(P===PH.rsg) sc.cut=lerp(900,1500,pP);
-    if(P===PH.sn&&sn.fired) sc={ch:['D2','A2','D3','A3','E4','A4'],cut:2600,pad:0.2,sub:0.12,shim:0.06,wind:0.07};
-    if(P===PH.hawk){ const k=smooth(0,0.6,pP); sc.pad=lerp(0.15,0.07,k); sc.cut=lerp(1600,800,k);
-      if(pP>0.85){ const s2=smooth(0.85,1,pP); sc.pad=lerp(0.07,0.28,s2); sc.cut=lerp(800,4500,s2); sc.wind=0.07*s2; } }
-    if(P===PH.die&&sn.dieFired){ sc=Object.assign({},SCORE[PH.dark],{pad:0.05}); tc=0.4; glide=0.6; }
-    if(P===PH.dark) sc.pad=lerp(0.07,0.035,pP);
-    this.chord(sc.ch,glide); this.mood(sc,tc);
-  },
-  boom(level,f0,f1,dur){ const c=this.ctx,t=c.currentTime; const o=c.createOscillator(); o.type='sine';
-    o.frequency.setValueAtTime(f0,t); o.frequency.exponentialRampToValueAtTime(f1,t+dur);
-    const g=c.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(level,t+0.03); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
-    o.connect(g); g.connect(this.bus); o.start(t); o.stop(t+dur+0.1); },
-  noise(level,f0,f1,dur,type,q){ const c=this.ctx,t=c.currentTime; const src=c.createBufferSource(); src.buffer=this.noiseBuf;
-    const f=c.createBiquadFilter(); f.type=type||'lowpass'; f.Q.value=q||0.7; f.frequency.setValueAtTime(f0,t); f.frequency.exponentialRampToValueAtTime(f1,t+dur);
-    const g=c.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(level,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
-    src.connect(f); f.connect(g); g.connect(this.bus); src.start(t,Math.random()*2); src.stop(t+dur+0.1); },
-  hit(type){
     if(!this.ready||!this.on||isPaused) return;
-    if(type==='breakout'){ this.boom(0.9,70,24,5.5); this.noise(0.5,6000,120,6.5); }
-    else if(type==='collapse'){ this.boom(0.75,55,20,4.5); this.noise(0.25,900,60,3.5); }
-    else if(type==='tear'){ this.noise(0.2,2600,280,1.6,'bandpass',1.2); this.boom(0.28,80,38,2.0); }
-    else if(type==='feed'){ this.boom(0.38,110,42,1.4); this.noise(0.1,4500,900,0.9,'highpass'); }
-    else if(type==='tick'){ this.noise(0.035,6000,3500,0.035,'highpass'); }
-    else if(type==='burst'){ this.boom(1.0,95,22,7.5); this.noise(0.75,9000,90,8.5); }
+    const sc0=SCORE[P]; let sc=Object.assign({},sc0), prog=sc0.prog, hold=9;
+    if(P===PH.sn&&sn.fired){ prog=[['D2','A2','D3','A3','E4','A4'],['Bb1','F2','D3','F3','A3','D4']]; Object.assign(sc,{str:0.19,choir:0.12,cut:3600,wind:0.06,vowel:'ah'}); hold=5; }
+    if(P===PH.rsg) sc.cut=lerp(1700,2400,pP);
+    if(P===PH.hawk){ const k=smooth(0,0.6,pP); sc.str=lerp(0.12,0.06,k); sc.choir=lerp(0.1,0.06,k);
+      if(pP>0.85){ const s2=smooth(0.85,1,pP); sc.str=lerp(0.06,0.22,s2); sc.choir=lerp(0.06,0.16,s2); sc.cut=lerp(2000,5200,s2); sc.wind=0.06*s2; } }
+    if(P===PH.die&&sn.dieFired){ sc=Object.assign({},SCORE[PH.dark],{str:0.04,choir:0.04}); prog=SCORE[PH.dark].prog; }
+    if(P===PH.dark){ sc.str=lerp(0.06,0.03,pP); sc.choir=lerp(0.06,0.03,pP); }
+    const changed=P!==this.lastP||prog!==this.prog;
+    if(changed){ this.lastP=P; this.prog=prog; this.chordIdx=0; this.chordT=0;
+      if(P===PH.ms||P===PH.rsg||P===PH.bh||P===PH.neb) this.brass(prog[0][0],5);
+      this.playChord(prog[0],P===PH.die&&sn.dieFired?6:3.5); }
+    this.chordT+=dt;
+    if(prog.length>1&&this.chordT>hold){ this.chordT=0; this.chordIdx=(this.chordIdx+1)%prog.length; this.playChord(prog[this.chordIdx],4); }
+    this.acc+=dt; if(this.acc>0.3){ this.acc=0; this.layers(sc,1.8); }
+    this.bellT-=dt;
+    if(sc.bells>0&&this.bellT<=0&&this.chord){ this.motif(this.chord.notes); this.bellT=(7+Math.random()*6)/sc.bells; }
+  },
+  motif(notes){ // celesta: a short phrase from the upper chord tones
+    const up=notes.slice(2).map(n=>NOTE(n)*2), c=this.ctx, n=3+Math.floor(Math.random()*3); let t=c.currentTime+0.1;
+    const dir=Math.random()<0.5?1:-1; let k=dir>0?0:up.length-1;
+    for(let i=0;i<n;i++){ this.bell(up[k],t,0.05+Math.random()*0.02); t+=0.38+Math.random()*0.5; k=Math.max(0,Math.min(up.length-1,k+dir*(1+Math.floor(Math.random()*2)))); }
+  },
+  bell(f,t,level){ const c=this.ctx;
+    const car=c.createOscillator(); car.frequency.value=f; const mod=c.createOscillator(); mod.frequency.value=f*3.5; const mi=c.createGain();
+    mi.gain.setValueAtTime(f*2.2,t); mi.gain.exponentialRampToValueAtTime(f*0.05,t+1.6); mod.connect(mi); mi.connect(car.frequency);
+    const g=c.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(level,t+0.004); g.gain.exponentialRampToValueAtTime(0.0001,t+3.2);
+    const p=c.createStereoPanner?c.createStereoPanner():null; car.connect(g); if(p){ p.pan.value=(Math.random()-0.5)*0.9; g.connect(p); p.connect(this.music); } else g.connect(this.music);
+    car.start(t); mod.start(t); car.stop(t+3.3); mod.stop(t+3.3); },
+  brass(note,dur){ // low horn section swell
+    const c=this.ctx, t=c.currentTime, f=NOTE(note); const fl=c.createBiquadFilter(); fl.type='lowpass'; fl.Q.value=1.2;
+    fl.frequency.setValueAtTime(180,t); fl.frequency.linearRampToValueAtTime(1500,t+dur*0.55); fl.frequency.linearRampToValueAtTime(400,t+dur);
+    const g=c.createGain(); g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(0.09,t+dur*0.5); g.gain.linearRampToValueAtTime(0,t+dur);
+    fl.connect(g); g.connect(this.music);
+    [1,1.5,2].forEach(r=>[-8,8].forEach(dc=>{ const o=c.createOscillator(); o.type='sawtooth'; o.frequency.value=f*r*(f<70?2:1); o.detune.value=dc; o.connect(fl); o.start(t); o.stop(t+dur+0.1); })); },
+  src(kind,t,dur,f0,f1,type,q,level,attack,decay,dest){ // filtered noise layer with an exponential envelope
+    const c=this.ctx, s=c.createBufferSource(); s.buffer=this.noise[kind]; s.loop=true;
+    const f=c.createBiquadFilter(); f.type=type; f.Q.value=q; f.frequency.setValueAtTime(f0,t); f.frequency.exponentialRampToValueAtTime(f1,t+dur);
+    const g=c.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(level,t+attack); g.gain.exponentialRampToValueAtTime(0.0001,t+attack+decay);
+    s.connect(f); f.connect(g); g.connect(dest||this.fx); s.start(t,Math.random()*3); s.stop(t+attack+decay+0.1); return g; },
+  tone(t,f0,f1,pitchT,level,decay,dest,type){ const c=this.ctx, o=c.createOscillator(); o.type=type||'sine';
+    o.frequency.setValueAtTime(f0,t); o.frequency.exponentialRampToValueAtTime(f1,t+pitchT);
+    const g=c.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(level,t+0.006); g.gain.exponentialRampToValueAtTime(0.0001,t+decay);
+    o.connect(g); g.connect(dest||this.fx); o.start(t); o.stop(t+decay+0.1); },
+  duck(depth,rec){ const t=this.ctx.currentTime, g=this.music.gain; g.cancelScheduledValues(t); g.setValueAtTime(g.value,t); g.linearRampToValueAtTime(depth,t+0.05); g.setTargetAtTime(1.5,t+0.4,rec/3); },
+  blast(scale){ // crack, saturated body, sub boom with pitch drop, rolling rumble, debris crackle
+    const c=this.ctx, t=c.currentTime+0.01;
+    this.duck(0.45,5);
+    this.src('white',t,0.25,9000,2500,'highpass',0.7,0.9*scale,0.002,0.18);
+    this.src('pink',t,3.0,5000,260,'lowpass',0.9,0.85*scale,0.01,3.2*scale,this.sat);
+    this.tone(t,92,30,1.4,1.0*scale,4.2*scale,this.sat);
+    this.tone(t,180,58,0.9,0.35*scale,2.2,this.sat,'triangle');
+    const rum=this.src('brown',t,9,220,70,'lowpass',0.6,0.9*scale,0.35,9.5*scale);
+    const am=c.createOscillator(); am.frequency.value=3.1; const amg=c.createGain(); amg.gain.value=0.25*scale; am.connect(amg); amg.connect(rum.gain); am.start(t); am.stop(t+10*scale);
+    for(let i=0;i<Math.round(46*scale);i++){ const dt=Math.pow(Math.random(),1.8)*4.5*scale;
+      const tt=t+0.15+dt, p=c.createStereoPanner?c.createStereoPanner():null, g=c.createGain();
+      const f=c.createBiquadFilter(); f.type='bandpass'; f.frequency.value=1200+Math.random()*4200; f.Q.value=2.5;
+      const s=c.createBufferSource(); s.buffer=this.noise.white; s.connect(f); f.connect(g);
+      const lv=0.25*(1-dt/(4.6*scale))*scale; g.gain.setValueAtTime(0.0001,tt); g.gain.exponentialRampToValueAtTime(Math.max(lv,0.002),tt+0.002); g.gain.exponentialRampToValueAtTime(0.0001,tt+0.03+Math.random()*0.07);
+      if(p){ p.pan.value=Math.random()*2-1; g.connect(p); p.connect(this.fx); } else g.connect(this.fx);
+      s.start(tt,Math.random()*3); s.stop(tt+0.12); }
+  },
+  riser(dur){ const c=this.ctx, t=c.currentTime; if(dur<0.3) return;
+    const s=c.createBufferSource(); s.buffer=this.noise.pink; s.loop=true;
+    const f=c.createBiquadFilter(); f.type='bandpass'; f.Q.value=1.4; f.frequency.setValueAtTime(250,t); f.frequency.exponentialRampToValueAtTime(7000,t+dur);
+    const g=c.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.32,t+dur); g.gain.setValueAtTime(0.0001,t+dur+0.01);
+    s.connect(f); f.connect(g); g.connect(this.fx); s.start(t); s.stop(t+dur+0.05);
+    const o=c.createOscillator(); o.type='sawtooth'; o.frequency.setValueAtTime(55,t); o.frequency.exponentialRampToValueAtTime(220,t+dur);
+    const of=c.createBiquadFilter(); of.type='lowpass'; of.frequency.value=900; const og=c.createGain(); og.gain.setValueAtTime(0.0001,t); og.gain.exponentialRampToValueAtTime(0.08,t+dur); og.gain.setValueAtTime(0.0001,t+dur+0.01);
+    o.connect(of); of.connect(og); og.connect(this.fx); o.start(t); o.stop(t+dur+0.05); },
+  timpani(note,level){ const c=this.ctx, t=c.currentTime, f=NOTE(note);
+    this.tone(t,f*1.08,f,0.12,level,2.8); this.tone(t,f*1.5*1.06,f*1.5,0.12,level*0.35,1.6);
+    this.src('pink',t,0.2,900,250,'bandpass',1.5,level*0.6,0.002,0.25); },
+  hit(type,arg){
+    if(!this.ready||!this.on||isPaused) return;
+    const c=this.ctx;
+    if(type==='riser') this.riser(arg);
+    else if(type==='breakout') this.blast(1.0);
+    else if(type==='collapse'){ this.duck(0.4,4); const t=c.currentTime;
+      this.src('brown',t,1.2,120,900,'lowpass',0.8,0.5,1.0,0.25);
+      this.tone(t+1.05,70,22,2.5,1.0,5.5,this.sat); this.src('pink',t+1.05,2.5,2200,90,'lowpass',0.8,0.45,0.01,3.5,this.sat); }
+    else if(type==='tear'){ const t=c.currentTime;
+      this.src('brown',t,2.4,180,1400,'bandpass',3.0,0.5,0.2,2.4); this.src('pink',t,2.0,600,3200,'bandpass',6.0,0.16,0.3,1.8);
+      this.tone(t,62,41,2.2,0.32,2.8,this.sat,'triangle'); }
+    else if(type==='feed'){ this.timpani(this.chord?this.chord.notes[0]:'C2',0.55); this.bell(NOTE('E6'),c.currentTime+0.05,0.03); }
+    else if(type==='tick'){ this.src('white',c.currentTime,0.03,7000,4000,'highpass',0.8,0.03,0.001,0.025); }
+    else if(type==='burst'){ this.blast(1.35); }
   },
 };
 
@@ -847,7 +979,7 @@ let hud = { massSun:25, temp:'', tempLabel:'T<sub>eff</sub>', size:'', epoch:'',
 // Star photosphere: Worley granulation and Eddington limb
 function buildStar(){
   const mat=new THREE.ShaderMaterial({
-    uniforms:{uTime:{value:0},uR:{value:3},uDisp:{value:0},uTeff:{value:37000},uNorm:{value:1},uBright:{value:3},uAlpha:{value:1},uCell:{value:14},uContrast:{value:0.03},uFlow:{value:0.02}},
+    uniforms:{tPlanck:{value:PLANCK_TEX},uTime:{value:0},uR:{value:3},uDisp:{value:0},uTeff:{value:37000},uNorm:{value:1},uBright:{value:3},uAlpha:{value:1},uCell:{value:14},uContrast:{value:0.03},uFlow:{value:0.02}},
     transparent:true,
     vertexShader:NOISE_GLSL+`uniform float uTime,uR,uDisp; varying vec3 vN,vP,vL;
       void main(){ vec3 n=normalize(position); float d=fbm(n*1.6+vec3(uTime*0.04))*uDisp; vec3 p=n*uR*(1.0+d);
@@ -902,12 +1034,12 @@ function shellMaterial(seed){
         float f1=pow(1.0-abs(snoise(q*1.5+uSeed)),7.0);
         float f2=pow(1.0-abs(snoise(q*3.6+uSeed*2.1)),9.0);
         float f3=pow(1.0-abs(snoise(q*8.0+uSeed*0.7)),10.0);
-        float fil=(f1*0.9+f2*0.6+f3*0.35)*(0.4+0.8*(fbm(vL*2.0+uSeed)*0.5+0.5));
-        float knots=smoothstep(0.62,0.92,fbm(vL*6.0+uSeed)*0.5+0.5);
+        float fil=(f1*0.9+f2*0.6+f3*0.35)*(0.4+0.8*(fbm3(vL*2.0+uSeed)*0.5+0.5));
+        float knots=smoothstep(0.62,0.92,fbm3(vL*6.0+uSeed)*0.5+0.5);
         float mO=smoothstep(-0.25,0.45,snoise(vL*1.3+uSeed*3.0));
         vec3 Ha=vec3(1.0,0.10,0.16), O3=vec3(0.10,0.80,0.72), S2=vec3(1.0,0.36,0.14);
         vec3 lc=mix(Ha,O3,mO); lc=mix(lc,S2,knots*0.45);
-        float diffuse=(fbm(vL*2.6+uSeed)*0.5+0.5);
+        float diffuse=(fbm3(vL*2.6+uSeed)*0.5+0.5);
         vec3 line=lc*(fil*1.6+knots*0.5)*uFil + vec3(0.35,0.5,1.0)*diffuse*0.35*uSynch;
         vec3 hot=uHotCol*(0.35+fil*1.2+diffuse*0.4);
         vec3 c=mix(line,hot,uHot)*limb;
@@ -917,7 +1049,7 @@ function shellMaterial(seed){
 }
 function buildEjecta(){
   ejecta=new THREE.Group();
-  [[1.0,1.3],[0.93,4.1],[0.86,7.7]].forEach(([s,seed])=>{ const m=new THREE.Mesh(new THREE.SphereGeometry(1,128,96),shellMaterial(seed)); m.scale.setScalar(s); m.rotation.set(seed,seed*0.7,seed*1.3); ejecta.add(m); });
+  [[1.0,1.3],[0.9,4.1]].forEach(([s,seed])=>{ const m=new THREE.Mesh(new THREE.SphereGeometry(1,128,96),shellMaterial(seed)); m.scale.setScalar(s); m.rotation.set(seed,seed*0.7,seed*1.3); ejecta.add(m); });
   ejecta.visible=false; scene.add(ejecta);
   lightShell=new THREE.Mesh(new THREE.SphereGeometry(1,96,64),shellMaterial(2.2)); lightShell.visible=false; scene.add(lightShell);
 }
@@ -1082,7 +1214,7 @@ function buildPlanets(){
     const DN=Math.round((IS_MOBILE?900:2200)*(pd.type==='gas'?1.6:1)), rnd=new Float32Array(DN*4), dp=new Float32Array(DN*3);
     for(let j=0;j<DN*4;j++) rnd[j]=Math.random();
     const dg=new THREE.BufferGeometry(); dg.setAttribute('position',new THREE.BufferAttribute(dp,3)); dg.setAttribute('aR',new THREE.BufferAttribute(rnd,4));
-    const dm=new THREE.ShaderMaterial({uniforms:{uTime:{value:0},uAlpha:{value:0},uTD:{value:0},uRt:{value:8},uTheta0:{value:0},uRin:{value:3.4},uK:{value:1},
+    const dm=new THREE.ShaderMaterial({uniforms:{tPlanck:{value:PLANCK_TEX},uTime:{value:0},uAlpha:{value:0},uTD:{value:0},uRt:{value:8},uTheta0:{value:0},uRin:{value:3.4},uK:{value:1},
         uCol:{value:new THREE.Vector3(...pd.color)},uLight:{value:new THREE.Vector3()},uPR:{value:pixelRatio},uSize:{value:pd.r}},
       transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,
       vertexShader:NOISE_GLSL+BB_GLSL+`attribute vec4 aR; uniform float uTime,uAlpha,uTD,uRt,uTheta0,uRin,uK,uPR,uSize; uniform vec3 uCol,uLight; varying vec3 vC; varying float vA;
@@ -1231,10 +1363,14 @@ function init(){
   fitFov(); camera.updateProjectionMatrix();
   clock=new THREE.Clock();
   skyTex=buildSky();
-  pipe=new Pipeline(); pipe.initLens();
+  pipe=new Pipeline(); pipe.initLens(); pipe.initNebula(); pipe.initPlain();
   buildStar(); buildEjecta(); buildNeutronStar(); buildJets(); buildPlanets(); buildOverlayParticles(); buildFabric();
   buildTimeline(); hookEvents();
   resetAll(); showCaption(0);
+  const vis=[]; scene.traverse(o=>{ vis.push([o,o.visible]); o.visible=true; });
+  camera.layers.enableAll(); renderer.compile(scene,camera); camera.layers.set(LAYER_MAIN);
+  vis.forEach(([o,v])=>{ o.visible=v; });
+  [pipe.nebMat,pipe.plainMat,pipe.lensMat,pipe.brightMat,pipe.blurH,pipe.blurV,pipe.finalMat].forEach(m=>{ pipe.quad.material=m; renderer.compile(pipe.quadScene,pipe.quadCam); });
   let frames=0;
   const boot=()=>{ frames++; animate(true); if(frames<3) requestAnimationFrame(boot); else { $('loader').classList.add('out'); Score.setOn(true); requestAnimationFrame(loop); } };
   requestAnimationFrame(boot);
@@ -1299,7 +1435,7 @@ function resetPlanets(){
     const u=p.mat.uniforms; u.uStretch.value=0; u.uHeat.value=0; u.uDissolve.value=0; p.debris.visible=false; });
 }
 function resetAll(){ simTime=0; phase=0; phaseTime=0; resetPlanets(); pipe.flash=0; pipe.exposure=0.9; shake=0; }
-function resetEvents(){ sn.fired=false; sn.bhFired=false; sn.dieFired=false; }
+function resetEvents(){ sn.fired=false; sn.bhFired=false; sn.dieFired=false; sn.riser=false; sn.hawkRiser=false; }
 function skipToPhase(i){
   phase=i; phaseTime=0; resetPlanets(); resetEvents(); if(i>=PH.die) sn.dieFired=false;
   if(i>PH.sn){ sn.fired=true; } if(i>PH.bh) sn.bhFired=true;
@@ -1317,13 +1453,13 @@ const smooth=(a,b,x)=>{ const t=Math.max(0,Math.min(1,(x-a)/(b-a))); return t*t*
 const lerp=(a,b,t)=>a+(b-a)*t;
 const lerpLog=(a,b,t)=>Math.exp(Math.log(a)+(Math.log(b)-Math.log(a))*t);
 
-const sn={fired:false,bhFired:false,dieFired:false};
+const sn={fired:false,bhFired:false,dieFired:false,riser:false,hawkRiser:false};
 function pulsar(dt,period,amp){
   const u=nsGroup.userData;
   u.beamAngle=(u.beamAngle||0)+dt*2*Math.PI/period*0.012;
   u.piv.rotation.y=u.beamAngle;
-  const ax=new THREE.Vector3(0,1,0).applyEuler(new THREE.Euler(0,u.beamAngle,0.52,'YXZ'));
-  const pulse=Math.pow(smooth(0.93,1.0,Math.abs(ax.dot(camera.position.clone().normalize()))),2);
+  const ax=TMP.v1.set(0,1,0).applyEuler(TMP.e.set(0,u.beamAngle,0.52,'YXZ'));
+  const pulse=Math.pow(smooth(0.93,1.0,Math.abs(ax.dot(TMP.v2.copy(camera.position).normalize()))),2);
   u.beamMats.forEach(m=>{ m.uniforms.uA.value=(0.22+pulse*0.8)*amp; m.uniforms.uTime.value=simTime; });
   u.fieldMats.forEach(m=>{ m.uniforms.uA.value=0.55*amp; m.uniforms.uTime.value=simTime; });
   u.core.material.uniforms.uBright.value=5.5*(1+pulse*1.5); u.core.material.uniforms.uTime.value=simTime;
@@ -1340,10 +1476,10 @@ function updatePhase(dt){
   hud.spin='n/a'; hud.z='n/a'; hud.tempLabel='T<sub>eff</sub>';
   let light=0; let lightC=[1,1,1];
 
-  const tB=PHASE_DUR[PH.sn]*0.09, SN_END=PHASE_DUR[PH.sn]-tB;
+  const tB=PHASE_DUR[PH.sn]*0.16, SN_END=PHASE_DUR[PH.sn]-tB;
   const shellR=t=>8.2+3.3*Math.pow(t,1.05);
   const setShells=(R,intensity,hot,hotCol,synch)=>{ ejecta.visible=intensity>0.002; ejecta.scale.setScalar(R);
-    ejecta.children.forEach((m,k)=>{ const u=m.material.uniforms; u.uInt.value=intensity*(0.32-k*0.06); u.uHot.value=hot; if(hotCol) u.uHotCol.value.set(...hotCol); u.uSynch.value=synch; u.uTime.value=simTime; }); };
+    ejecta.children.forEach((m,k)=>{ const u=m.material.uniforms; u.uInt.value=intensity*(0.42-k*0.08); u.uHot.value=hot; if(hotCol) u.uHotCol.value.set(...hotCol); u.uSynch.value=synch; u.uTime.value=simTime; }); };
   let neb={R:0,int:0,dust:0,pwn:0};
 
   if(P===PH.ms){ // main sequence: 37 kK O star
@@ -1365,6 +1501,7 @@ function updatePhase(dt){
       st.visible=true; st.R=8.2+Math.sin(phaseTime*40)*0.01*phaseTime; st.Teff=3550; st.cell=2.6; st.contrast=0.16; st.disp=0.07; st.alpha=1; st.bright=1.15; st.coronaOp=0.7;
       hud.tempLabel='T<sub>core</sub>'; hud.temp=`${sci(lerpLog(3.5e9,1e11,phaseTime/tB))} K`; hud.epoch=`+${Math.round(phaseTime/tB*400)} ms`; hud.size='core 1.5×10³ km → 30 km';
       light=6; expoTarget=0.62; sn.fired=false;
+      if(!sn.riser){ sn.riser=true; Score.hit('riser',tB-phaseTime); }
     } else {
       if(!sn.fired){ sn.fired=true; Score.hit('breakout'); }
       if(snT<0.05){ pipe.flash=Math.max(pipe.flash,2.4); pipe.flashCol.set(0.75,0.82,1.0); shake=Math.max(shake,1); }
@@ -1450,6 +1587,7 @@ function updatePhase(dt){
     hud.epoch=`τ<sub>left</sub> ≈ 10${sup((Math.log10(PHYS.T_EVAP_10MSUN_YR)-60*x).toFixed(1))} yr`;
     hud.spin=`a/M = ${a.toFixed(3)}`; hud.z='n/a';
     light=1.6*bh.disk; lightC=bbColor(9000);
+    if(x>0.955&&!sn.hawkRiser){ sn.hawkRiser=true; Score.hit('riser',(1-x)*PHASE_DUR[PH.hawk]+0.22); }
     if(x>0.92){ pipe.flash=Math.max(pipe.flash,(x-0.92)/0.08*0.5); pipe.flashCol.set(0.8,0.86,1); }
     camTarget={dist:lerp(46,22,smooth(0.2,0.95,x)),pitch:0.18}; expoTarget=lerp(0.9,1.3,smooth(0.1,0.5,x));
     if(pP>=1) advance();
@@ -1544,10 +1682,10 @@ function updatePlanets(dt){
     p.grp.visible=p.state==='ok'||(p.state==='shred'&&p.shredT<2.2);
     p.grp.position.set(Math.cos(p.angle)*p.orbit,0,-Math.sin(p.angle)*p.orbit);
     if(stretch<0.05) p.grp.rotation.y+=dt*0.6;
-    const toBH=p.grp.position.clone().negate().normalize();
+    const toBH=TMP.v1.copy(p.grp.position).negate().normalize();
     const u=p.mat.uniforms;
     u.uStretch.value=ease(stretch); u.uHeat.value=heat; u.uDissolve.value=dissolve*1.4;
-    u.uBHDir.value.copy(toBH.applyQuaternion(p.grp.quaternion.clone().invert())); u.uTime.value=simTime;
+    u.uBHDir.value.copy(toBH.applyQuaternion(TMP.q.copy(p.grp.quaternion).invert())); u.uTime.value=simTime;
     u.uLightPos.value.copy(lightPos); u.uLightCol.value.copy(lightCol);
     p.rings.forEach(r=>{ if(r.uniforms) r.uniforms.uLightCol.value.copy(lightCol).multiplyScalar(0.3*(1-dissolve)); else r.opacity=Math.min(0.7,0.15+lum3([lightCol.x,lightCol.y,lightCol.z])*0.05)*(1-dissolve); });
   });
@@ -1584,7 +1722,8 @@ function updatePhotons(){
 }
 
 // Loop
-let fpsAcc=0, fpsN=0, fpsT=0;
+let fpsAcc=0, fpsN=0, fpsT=0, fastRuns=0;
+const TMP={v1:new THREE.Vector3(),v2:new THREE.Vector3(),v3:new THREE.Vector3(),q:new THREE.Quaternion(),e:new THREE.Euler()};
 const tmpM=new THREE.Matrix4(), vp=new THREE.Matrix4(), fwd=new THREE.Vector3();
 function loop(){ requestAnimationFrame(loop); animate(false); }
 function animate(boot){
@@ -1612,7 +1751,7 @@ function animate(boot){
   lu.uViewProj.value.copy(vp); lu.uInvViewProj.value.copy(tmpM.copy(vp).invert());
   lu.uCamPos.value.copy(camera.position); camera.getWorldDirection(fwd); lu.uCamFwd.value.copy(fwd);
   lu.uNear.value=camera.near; lu.uFar.value=camera.far;
-  const s=new THREE.Vector3(0,0,0).project(camera); lu.uBHuv.value.set(s.x*0.5+0.5,s.y*0.5+0.5); pipe.flashUV.copy(lu.uBHuv.value);
+  const s=TMP.v3.set(0,0,0).project(camera); lu.uBHuv.value.set(s.x*0.5+0.5,s.y*0.5+0.5); pipe.flashUV.copy(lu.uBHuv.value);
   if(s.z>1) lu.uHawkGlow.value=0;
   pipe.bloomOn=show.bloom;
   pipe.flash=Math.max(0,pipe.flash-raw*0.9*(isPaused?0:1));
@@ -1620,12 +1759,13 @@ function animate(boot){
   updateHUD();
   // adaptive resolution
   if(!boot){ fpsAcc+=raw; fpsN++; fpsT+=raw;
-    if(fpsT>2.5){ const fps=fpsN/fpsAcc; fpsAcc=fpsN=fpsT=0;
-      if(fps<38 && pixelRatio>0.6) setPixelRatio(Math.max(0.6,pixelRatio-0.2));
-      else if(fps>57 && pixelRatio<maxPR()-0.01) setPixelRatio(Math.min(maxPR(),pixelRatio+0.1)); } }
+    if(fpsT>2.0){ const fps=fpsN/fpsAcc; fpsAcc=fpsN=fpsT=0; const floor=IS_MOBILE?0.65:0.9;
+      if(fps<46){ fastRuns=0; if(pixelRatio>floor+0.01) setPixelRatio(Math.max(floor,pixelRatio-0.1)); }
+      else if(fps>58){ if(++fastRuns>=3&&pixelRatio<maxPR()-0.01){ fastRuns=0; setPixelRatio(Math.min(maxPR(),pixelRatio+0.1)); } }
+      else fastRuns=0; } }
 }
 
-try{ init(); }catch(err){ console.error(err); $('fatal').querySelector('h2').textContent='The simulation failed to start'; $('fatal').querySelector('p').textContent=String(err&&err.message||err); $('fatal').style.display='grid'; $('loader').classList.add('out'); }
+setTimeout(()=>{ try{ init(); }catch(err){ console.error(err); $('fatal').querySelector('h2').textContent='The simulation failed to start'; $('fatal').querySelector('p').textContent=String(err&&err.message||err); $('fatal').style.display='grid'; $('loader').classList.add('out'); } },40);
 </script>
 </body>
 </html>
