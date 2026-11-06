@@ -283,6 +283,7 @@ float lum(vec3 c){ return dot(c,vec3(0.2126,0.7152,0.0722)); }
 
 // Simplex noise and fBm
 const NOISE_GLSL = `
+// simplex noise and fbm variants
 vec3 mod289(vec3 x){return x-floor(x*(1.0/289.0))*289.0;}
 vec4 mod289(vec4 x){return x-floor(x*(1.0/289.0))*289.0;}
 vec4 permute(vec4 x){return mod289(((x*34.0)+1.0)*x);}
@@ -308,6 +309,7 @@ float snoise(vec3 v){
 }
 float fbm(vec3 p){ float v=0.0,a=0.5; for(int i=0;i<5;i++){ v+=a*snoise(p); p=p*2.03+vec3(17.1); a*=0.5; } return v; }
 float fbm3(vec3 p){ float v=0.0,a=0.5; for(int i=0;i<3;i++){ v+=a*snoise(p); p=p*2.07+vec3(31.7); a*=0.5; } return v; }
+float turb3(vec3 p){ float v=0.0,a=0.5; for(int i=0;i<3;i++){ v+=a*abs(snoise(p)); p=p*2.0+vec3(100.0); a*=0.5; } return v*1.15; }
 float turbulence(vec3 p){ float v=0.0,a=0.5; for(int i=0;i<5;i++){ v+=a*abs(snoise(p)); p=p*2.0+vec3(100.0); a*=0.5; } return v; }
 `;
 
@@ -426,17 +428,17 @@ class Pipeline {
         }`});
   }
   initLens(){
-    const D = `#define MAX_STEPS ${QUALITY.steps}\n#define STEP_K ${QUALITY.stepK.toFixed(3)}\n#define NEB_STEPS ${QUALITY.neb}\n`;
+    const D = (IS_WEBGL2?`uniform int uMaxSteps;\n#define MAX_STEPS uMaxSteps\n`:`#define MAX_STEPS ${QUALITY.steps}\n`)+`#define STEP_K ${QUALITY.stepK.toFixed(3)}\n#define NEB_STEPS ${QUALITY.neb}\n`;
     this.lensMat=new THREE.ShaderMaterial({
       uniforms:{
         tPlanck:{value:PLANCK_TEX}, tNeb:{value:null}, tScene:{value:this.sceneRT.texture}, tDepth:{value:this.sceneRT.depthTexture}, tSky:{value:skyTex},
         uInvViewProj:{value:new THREE.Matrix4()}, uViewProj:{value:new THREE.Matrix4()},
         uCamPos:{value:new THREE.Vector3()}, uCamFwd:{value:new THREE.Vector3()},
-        uNear:{value:0.5}, uFar:{value:3000},
+        uNear:{value:0.5}, uFar:{value:3000}, uMaxSteps:{value:QUALITY.steps},
         uM:{value:0}, uSpin:{value:0.7}, uBend:{value:1}, uRH:{value:2},
         uDiskOpacity:{value:0}, uDiskIn:{value:3.393}, uDiskOut:{value:15}, uDiskTmax:{value:PHYS.DISK_TMAX_VIS}, uDiskBright:{value:0.6},
         uTime:{value:0}, uSkyFade:{value:1}, uHawkCol:{value:new THREE.Vector3()}, uHawkGlow:{value:0},
-        uNebR:{value:0}, uNebInt:{value:0}, uNebDust:{value:0}, uNebPWN:{value:0},
+        uNebOn:{value:0}, uNebR:{value:0}, uNebInt:{value:0}, uNebDust:{value:0}, uNebPWN:{value:0},
         uRes:{value:new THREE.Vector2(this.w,this.h)}, uBHuv:{value:new THREE.Vector2(.5,.5)}, uPR:{value:pixelRatio},
       },
       vertexShader:QUAD_VS, depthTest:false, depthWrite:false, extensions:{shaderTextureLOD:true},
@@ -445,7 +447,7 @@ class Pipeline {
         uniform mat4 uInvViewProj, uViewProj; uniform vec3 uCamPos, uCamFwd;
         uniform float uNear,uFar,uM,uSpin,uBend,uRH,uDiskOpacity,uDiskIn,uDiskOut,uDiskTmax,uDiskBright,uTime,uSkyFade,uHawkGlow,uPR;
         uniform vec3 uHawkCol; uniform vec2 uRes, uBHuv; varying vec2 vUv;
-        uniform sampler2D tNeb; uniform float uNebInt;
+        uniform sampler2D tNeb; uniform float uNebOn;
         const float RINT=22.0; const float RSTART=60.0;
 
         float objDistAt(vec2 uv, vec3 dir){
@@ -567,7 +569,7 @@ class Pipeline {
             if(status>0.5 && status<1.5) acc+=trans*background(outDir,scol,objW,tca*uM);
             col=acc;
           }
-          if(uNebInt>0.001){ vec4 nb=texture2D(tNeb,vUv); col=nb.rgb+col*nb.a; }
+          if(uNebOn>0.5){ vec4 nb=texture2D(tNeb,vUv); col=nb.rgb+col*nb.a; }
           // Hawking ember: unresolved point source once the hole is smaller than a pixel
           float pr=uPR; float d2=dot(dpx,dpx)/(pr*pr);
           col+=uHawkCol*uHawkGlow*(exp(-d2/5.0)*3.0+exp(-sqrt(d2)/22.0)*0.25);
@@ -578,16 +580,16 @@ class Pipeline {
   initPlain(){ // compositor for phases without a hole: no ray march compiled in at all
     const L=this.lensMat.uniforms;
     this.plainMat=new THREE.ShaderMaterial({
-      uniforms:{tScene:L.tScene, tDepth:L.tDepth, tSky:L.tSky, tNeb:L.tNeb, uInvViewProj:L.uInvViewProj, uCamPos:L.uCamPos, uSkyFade:L.uSkyFade, uNebInt:L.uNebInt,
+      uniforms:{tScene:L.tScene, tDepth:L.tDepth, tSky:L.tSky, tNeb:L.tNeb, uInvViewProj:L.uInvViewProj, uCamPos:L.uCamPos, uSkyFade:L.uSkyFade, uNebOn:L.uNebOn,
         uHawkGlow:L.uHawkGlow, uHawkCol:L.uHawkCol, uPR:L.uPR, uRes:L.uRes, uBHuv:L.uBHuv},
       vertexShader:QUAD_VS, depthTest:false, depthWrite:false, extensions:{shaderTextureLOD:true},
       fragmentShader:`uniform sampler2D tScene,tDepth,tNeb; uniform samplerCube tSky; uniform mat4 uInvViewProj; uniform vec3 uCamPos;
-        uniform float uSkyFade,uNebInt,uHawkGlow,uPR; uniform vec3 uHawkCol; uniform vec2 uRes,uBHuv; varying vec2 vUv;
+        uniform float uSkyFade,uNebOn,uHawkGlow,uPR; uniform vec3 uHawkCol; uniform vec2 uRes,uBHuv; varying vec2 vUv;
         void main(){
           vec4 wp=uInvViewProj*vec4(vUv*2.0-1.0,1.0,1.0); wp/=wp.w; vec3 dir=normalize(wp.xyz-uCamPos);
           vec3 col=texture2D(tScene,vUv).rgb;
           if(texture2D(tDepth,vUv).x>0.99999) col+=textureCubeLodEXT(tSky,dir,0.0).rgb*uSkyFade;
-          if(uNebInt>0.001){ vec4 nb=texture2D(tNeb,vUv); col=nb.rgb+col*nb.a; }
+          if(uNebOn>0.5){ vec4 nb=texture2D(tNeb,vUv); col=nb.rgb+col*nb.a; }
           vec2 dpx=(vUv-uBHuv)*uRes; float d2=dot(dpx,dpx)/(uPR*uPR);
           col+=uHawkCol*uHawkGlow*(exp(-d2/5.0)*3.0+exp(-sqrt(d2)/22.0)*0.25);
           gl_FragColor=vec4(col,1.0);
@@ -595,20 +597,28 @@ class Pipeline {
   }
   initNebula(){
     const L=this.lensMat.uniforms;
-    this.nebMat=new THREE.ShaderMaterial({
-      uniforms:{uInvViewProj:L.uInvViewProj, uCamPos:L.uCamPos, uTime:L.uTime, uNebR:L.uNebR, uNebInt:L.uNebInt, uNebDust:L.uNebDust, uNebPWN:L.uNebPWN},
+    Object.assign(L,{uHot:{value:0},uHotT:{value:6000},uHotB:{value:1},uHotNorm:{value:1},uFill:{value:0},uPwnR:{value:0},uPwnInt:{value:0}});
+    const mk=(defs,steps)=>new THREE.ShaderMaterial({
+      uniforms:{tPlanck:L.tPlanck, tDepth:L.tDepth, uNear:L.uNear, uFar:L.uFar, uCamFwd:L.uCamFwd,
+        uInvViewProj:L.uInvViewProj, uCamPos:L.uCamPos, uTime:L.uTime, uNebR:L.uNebR, uNebInt:L.uNebInt, uNebDust:L.uNebDust, uNebPWN:L.uNebPWN,
+        uHot:L.uHot, uHotT:L.uHotT, uHotB:L.uHotB, uHotNorm:L.uHotNorm, uFill:L.uFill, uPwnR:L.uPwnR, uPwnInt:L.uPwnInt,
+        uNebSteps:{value:steps}, uPwnSteps:{value:IS_MOBILE?16:28}},
       vertexShader:QUAD_VS, depthTest:false, depthWrite:false,
-      fragmentShader:`#define NEB_STEPS ${QUALITY.neb}\n`+NOISE_GLSL+`uniform mat4 uInvViewProj; uniform vec3 uCamPos; uniform float uTime; varying vec2 vUv;
-        uniform float uNebR,uNebInt,uNebDust,uNebPWN;
-        // remnant ray march: line emission from shocked gas, extinction by dust
+      fragmentShader:defs+(IS_WEBGL2?`uniform int uNebSteps, uPwnSteps;\n#define NEB_STEPS uNebSteps\n#define PWN_STEPS uPwnSteps\n`:`#define NEB_STEPS ${steps}\n#define PWN_STEPS ${IS_MOBILE?16:28}\n`)+NOISE_GLSL+BB_GLSL+`
+        uniform sampler2D tDepth; uniform mat4 uInvViewProj; uniform vec3 uCamPos, uCamFwd; uniform float uTime, uNear, uFar; varying vec2 vUv;
+        uniform float uNebR,uNebInt,uNebDust,uNebPWN,uHot,uHotT,uHotB,uHotNorm,uFill,uPwnR,uPwnInt;
         #define HALF (NEB_STEPS/2)
         const vec3 O3=vec3(0.08,0.60,0.66), Ha=vec3(1.0,0.12,0.19), S2=vec3(1.0,0.40,0.14), Sy=vec3(0.42,0.58,1.0);
-        // march one stretch of the emitting shell; samples are spent only where gas can exist
-        void seg(vec3 ro, vec3 rd, float ta, float tb, float jit, inout vec3 em, inout float T){
-          float dt=(tb-ta)/float(HALF); if(dt<=0.0) return;
-          float dl=dt/uNebR; float t=ta+dt*jit;
-          for(int i=0;i<HALF;i++){
+        // one stretch of the ejecta: thermal fireball early, line-emitting filaments and dust later
+        void seg(vec3 ro, vec3 rd, float a0, float b0, float a1, float b1, vec3 coreEm, float jit, inout vec3 em, inout float T){
+          float dt0=max(b0-a0,0.0)/float(HALF), dt1=max(b1-a1,0.0)/float(HALF);
+          for(int i=0;i<NEB_STEPS;i++){   // both shell segments in a single loop so the compiler emits it once
             if(T<0.01) break;
+            if(i==HALF) em+=T*coreEm;
+            bool second=i>=HALF; float dt=second?dt1:dt0;
+            if(dt<=0.0) continue;
+            float t=second?a1+dt1*(float(i-HALF)+jit):a0+dt0*(float(i)+jit);
+            float dl=dt/uNebR;
             vec3 q=(ro+rd*t)/uNebR; float r=max(length(q),1e-3);
             float warp=fbm3(q*2.2+vec3(1.7,4.1,uTime*0.004));
             float rr=r+0.19*warp;
@@ -619,29 +629,75 @@ class Pipeline {
             float ion=smoothstep(0.68,0.9,rr+0.18*finger-0.08+0.1*warp);
             vec3 lc=mix(O3*1.7,Ha,ion); lc=mix(lc,S2,smoothstep(0.45,0.9,fil)*ion*0.5);
             float dust=uNebDust*smoothstep(0.3,0.62,0.5+0.5*snoise(q*2.4+vec3(3.0,1.0,7.0))+0.25*warp-0.3*fil)*exp(-pow((rr-0.7)/0.19,2.0))*14.0;
-            em+=T*(lc*gas+vec3(0.30,0.15,0.07)*dust*0.012*(0.5+0.5*uNebPWN))*dl;
-            T*=exp(-dust*dl); t+=dt;
+            // hot phase: optically thick plasma, Rayleigh-Taylor plumes at the edge, colour from its temperature
+            vec3 e; float sig=dust;
+            #ifdef HOT
+            {
+              float big=0.7*warp+0.9*(finger-0.5);                           // large convective plumes
+              float plume=smoothstep(-0.55,0.55,big);
+              float body=uFill*(1.0-smoothstep(0.5+0.28*finger+0.22*big,0.99,rr));
+              float rim=exp(-pow((rr-0.93-0.05*big)/0.035,2.0))*uFill;          // shock front racing ahead of the ejecta
+              float hotGas=max(max(body*(0.18+1.2*plume), shell*(0.3+1.6*fil)), rim*(0.5+0.8*fil));
+              float Tl=uHotT*(0.36+0.8*plume+0.22*fil+0.18*shell)*(1.0-0.32*smoothstep(0.55,0.9,rr))+uHotT*0.6*rim;
+              vec3 th=planckRGB(Tl)*uHotNorm*uHotB;
+              e=mix(lc*gas+vec3(0.30,0.15,0.07)*dust*0.012, th*hotGas*2.2, uHot);
+              sig+=uHot*hotGas*14.0;
+            }
+            #else
+            e=lc*gas+vec3(0.30,0.15,0.07)*dust*0.012*(0.5+0.5*uNebPWN);
+            #endif
+            em+=T*e*dl; T*=exp(-sig*dl);
           }
         }
-        vec4 nebula(vec3 ro, vec3 rd){
-          float R=uNebR; float bq=dot(ro,rd); float c0=dot(ro,ro);
-          float h=bq*bq-c0+R*R; if(h<=0.0) return vec4(0.0,0.0,0.0,1.0);
-          h=sqrt(h); float t0=max(-bq-h,0.0), t1=-bq+h; if(t1<=0.0) return vec4(0.0,0.0,0.0,1.0);
-          float jit=fract(sin(dot(gl_FragCoord.xy,vec2(12.9898,78.233)))*43758.5453);
-          vec3 em=vec3(0.0); float T=1.0;
-          float Ri=0.42*R; float hi=bq*bq-c0+Ri*Ri;
-          if(hi>0.0){
-            hi=sqrt(hi); float ti0=-bq-hi, ti1=-bq+hi;
-            if(ti1>0.0){
-              seg(ro,rd,t0,max(ti0,t0),jit,em,T);
-              vec3 qo=ro/R; float qb=dot(qo,rd); float b2=max(dot(qo,qo)-qb*qb,0.0);   // pulsar wind nebula, integrated analytically
-              em+=T*Sy*uNebPWN*2.4*0.25*exp(-b2/0.02)*(0.7+0.6*abs(snoise(rd*40.0+uTime*0.05)));
-              seg(ro,rd,max(ti1,t0),t1,jit,em,T);
-            } else { float m=0.5*(t0+t1); seg(ro,rd,t0,m,jit,em,T); seg(ro,rd,m,t1,jit,em,T); }
-          } else { float m=0.5*(t0+t1); seg(ro,rd,t0,m,jit,em,T); seg(ro,rd,m,t1,jit,em,T); }
-          return vec4(em*3.2*uNebInt, mix(1.0,T,uNebInt));
+        #ifdef PWN
+        // pulsar wind nebula: equatorial torus, inner wisps moving outward, knotted polar jets
+        vec3 pwn(vec3 ro, vec3 rd, float tMax){
+          float R=uPwnR*1.4; float bq=dot(ro,rd); float h=bq*bq-dot(ro,ro)+R*R; if(h<=0.0) return vec3(0.0);
+          h=sqrt(h); float t0=max(-bq-h,0.0), t1=min(-bq+h,tMax); if(t1<=t0) return vec3(0.0);
+          float dt=(t1-t0)/float(PWN_STEPS); float t=t0+dt*0.5; vec3 e=vec3(0.0);
+          for(int i=0;i<PWN_STEPS;i++){
+            vec3 p=(ro+rd*t)/uPwnR; float rho=length(p.xz), y=p.y, r=length(p);
+            float n=snoise(p*3.5+vec3(0.0,uTime*0.08,0.0));
+            float torus=exp(-(pow(rho-0.62-0.06*n,2.0)+pow(y*1.7,2.0))/0.010)*(0.55+0.7*(n*0.5+0.5));
+            float wisp=0.5+0.5*sin(rho*30.0-uTime*2.6+n*2.5);
+            float disc=exp(-y*y/0.0035)*smoothstep(0.7,0.18,rho)*pow(wisp,3.0)*0.55;
+            float ay=abs(y); float jets=exp(-rho*rho/(0.0025+0.004*ay))*smoothstep(0.06,0.16,ay)*(1.0-smoothstep(0.55,1.15,ay))*(0.45+0.55*pow(0.5+0.5*sin(ay*22.0-uTime*4.0),4.0));
+            float halo=exp(-r*r/0.3)*0.07*(0.6+0.4*n);
+            vec3 c=mix(vec3(0.45,0.6,1.0),vec3(0.95,0.97,1.0),clamp(torus*0.8+jets*0.5,0.0,1.0));
+            e+=c*(torus*1.4+disc+jets*1.8+halo)*dt/uPwnR;
+            t+=dt;
+          }
+          return e*uPwnInt*3.0;
         }
-        void main(){ vec4 wp=uInvViewProj*vec4(vUv*2.0-1.0,1.0,1.0); wp/=wp.w; gl_FragColor=nebula(uCamPos,normalize(wp.xyz-uCamPos)); }`});
+        #endif
+        void main(){
+          vec4 wp=uInvViewProj*vec4(vUv*2.0-1.0,1.0,1.0); wp/=wp.w; vec3 rd=normalize(wp.xyz-uCamPos), ro=uCamPos;
+          // stop the march at solid bodies so planets inside the remnant stay visible
+          float d=texture2D(tDepth,vUv).x; float tObj=1e9;
+          if(d<0.99999){ float vz=uNear*uFar/((uFar-uNear)*d-uFar); tObj=-vz/max(dot(rd,uCamFwd),1e-3); }
+          vec3 em=vec3(0.0); float T=1.0;
+          float R=uNebR; float bq=dot(ro,rd); float c0=dot(ro,ro); float h=bq*bq-c0+R*R;
+          if(uNebInt>0.001 && h>0.0){
+            h=sqrt(h); float t0=max(-bq-h,0.0), t1=min(-bq+h,tObj);
+            if(t1>t0){
+              // two shell segments around the hollow interior; each loop is emitted once so it compiles fast
+              float jit=fract(sin(dot(gl_FragCoord.xy,vec2(12.9898,78.233)))*43758.5453);
+              float Ri=0.42*R*(1.0-uFill); float hi=bq*bq-c0+Ri*Ri;
+              float a0=t0, b0=0.5*(t0+t1), a1=b0, b1=t1, core=0.0;
+              if(hi>0.0 && Ri>0.0){ hi=sqrt(hi); float ti0=-bq-hi, ti1=-bq+hi;
+                if(ti1>0.0){ b0=min(max(ti0,t0),t1); a1=max(ti1,t0); core=tObj>-bq?1.0:0.0; } }
+              vec3 qo=ro/R; float qb=dot(qo,rd); float b2=max(dot(qo,qo)-qb*qb,0.0);
+              vec3 coreEm=core*Sy*uNebPWN*2.4*0.25*exp(-b2/0.02)*(0.7+0.6*abs(snoise(rd*40.0+uTime*0.05)));
+              seg(ro,rd,a0,b0,a1,b1,coreEm,jit,em,T);
+            }
+            em*=3.2*uNebInt; T=mix(1.0,T,uNebInt);
+          }
+          #ifdef PWN
+          em+=T*pwn(ro,rd,tObj);
+          #endif
+          gl_FragColor=vec4(em,T);
+        }`});
+    this.nebCold=mk('',QUALITY.neb); this.nebHot=mk('#define HOT\n',IS_MOBILE?24:40); this.nebPwn=mk('#define PWN\n',QUALITY.neb); this.nebMat=this.nebCold;
     L.tNeb.value=this.nebRT.texture;
   }
   pass(mat,target){ this.quad.material=mat; renderer.setRenderTarget(target); renderer.render(this.quadScene,this.quadCam); }
@@ -649,7 +705,8 @@ class Pipeline {
     renderer.setClearColor(0x000000,0);
     camera.layers.set(LAYER_MAIN);
     renderer.setRenderTarget(this.sceneRT); renderer.clear(true,true,false); renderer.render(scene,camera);
-    if(this.lensMat.uniforms.uNebInt.value>0.001) this.pass(this.nebMat,this.nebRT);
+    const L=this.lensMat.uniforms; L.uNebOn.value=(L.uNebInt.value>0.001||L.uPwnInt.value>0.001)?1:0;
+    if(L.uNebOn.value>0.5) this.pass(L.uHot.value>0.01?this.nebHot:(L.uPwnInt.value>0.001?this.nebPwn:this.nebCold),this.nebRT);
     this.pass(this.lensMat.uniforms.uM.value>1e-4?this.lensMat:this.plainMat,this.hdrRT);
     camera.layers.set(LAYER_OVERLAY);
     renderer.autoClear=false; renderer.setRenderTarget(this.hdrRT); renderer.clearDepth(); renderer.render(scene,camera); renderer.autoClear=true;
@@ -749,12 +806,12 @@ const PHASE_DUR=[13, 13, 11, 18, 9, 9, 9, 999, 26, 7, 18];
 const PHASES=[
   {key:'ms',   label:'Main sequence', title:'Main sequence', sub:'A 25 M☉ O-type star fuses hydrogen through the CNO cycle. Surface 37,000 K, 100,000 times the Sun’s luminosity.'},
   {key:'rsg',  label:'Supergiant',    title:'Red supergiant', sub:'Hydrogen exhausted. The envelope swells a thousandfold and cools to 3,600 K; giant convection cells boil across the surface. Mercury is engulfed.'},
-  {key:'sn',   label:'Supernova',     title:'Core collapse', sub:'The iron core implodes at a quarter of light speed. Neutrinos carry off 3×10⁵³ erg; the shock breaks out and the star becomes a fireball.'},
+  {key:'sn',   label:'Supernova',     title:'Core collapse', sub:'The iron core implodes at a quarter of light speed. The shock breaks out in a flash, and a turbulent fireball of plumes expands, cools from white to orange and thins into glowing gas.'},
   {key:'neb',  label:'Nebula',        title:'Supernova remnant', sub:'Ejecta plough into interstellar gas at 5,000 km/s. Shocked hydrogen glows red, oxygen teal, sulphur orange. Cooling ejecta condense into dust that blots out the stars behind; the newborn pulsar lights a blue synchrotron core.'},
-  {key:'ns',   label:'Neutron star',  title:'Neutron star', sub:'A 12 km sphere of nuclear matter, 1.8 M☉, spinning hundreds of times a second inside the expanding remnant. Fallback pushes it toward the TOV limit.'},
+  {key:'ns',   label:'Neutron star',  title:'Neutron star', sub:'A 12 km ball of nuclear matter spinning hundreds of times a second. Its wind inflates a glowing torus and polar jets of synchrotron light inside the remnant, while fallback pushes it toward the TOV limit.'},
   {key:'bh',   label:'Black hole',    title:'Kerr black hole', sub:'Collapse past 2.25 M☉. Fallback grows the hole to 10 M☉ with spin a/M = 0.7. Light bends around it; a disk ignites at the ISCO.'},
   {key:'jet',  label:'Jets',          title:'Relativistic jets', sub:'Magnetic fields threading the spinning horizon launch twin jets (Blandford–Znajek). The approaching jet is Doppler-boosted; the counter-jet fades.'},
-  {key:'acc',  label:'Accretion',     title:'Tidal disruption', sub:'Planets spiral in, are stretched past their Roche limit and fed to the disk. Each one flares as it crosses the innermost stable orbit.'},
+  {key:'acc',  label:'Accretion',     title:'Tidal disruption', sub:'Each planet falls to its tidal radius, is stretched and torn into a string of glowing fragments, and the stream winds around the hole before it feeds the disk.'},
   {key:'hawk', label:'Evaporation',   title:'Hawking evaporation', sub:'10⁷⁰ years pass. The stars burn out. The hole, colder than any star, slowly radiates its mass away and heats as it shrinks.'},
   {key:'die',  label:'Final burst',   title:'The last second', sub:'Below 10⁸ kg the hole radiates at petawatts and vanishes in a flash of gamma rays and particles.'},
   {key:'dark', label:'Dark era',      title:'Dark era', sub:'Nothing remains but a thinning shell of radiation, expanding into a universe without stars.'},
@@ -763,7 +820,7 @@ const PHASES=[
 // objects
 let starMesh, coronaMesh, ejecta, lightShell, nsGroup, jets=[], hawkPts, explPts, dustPts, fabric, photonSystems=[];
 const planets=[];
-let lightPos=new THREE.Vector3(), lightCol=new THREE.Vector3(1,1,1);
+let lightPos=new THREE.Vector3(), lightCol=new THREE.Vector3(1,1,1), amb=new THREE.Vector3();
 const st = { R:3, Teff:37000, bright:3.5, alpha:1, cell:14, contrast:0.03, disp:0, flow:0.02, visible:true, coronaOp:0.35 };
 const bh = { M:0, spin:0.7, disk:0, diskOut:15, hawkT:0, glow:0, massSun:0 };
 let hud = { massSun:25, temp:'', tempLabel:'T<sub>eff</sub>', size:'', epoch:'', spin:'n/a', z:'n/a' };
@@ -841,9 +898,14 @@ function shellMaterial(seed){
 }
 function buildEjecta(){
   ejecta=new THREE.Group();
-  [[1.0,1.3],[0.9,4.1]].forEach(([s,seed])=>{ const m=new THREE.Mesh(new THREE.SphereGeometry(1,128,96),shellMaterial(seed)); m.scale.setScalar(s); m.rotation.set(seed,seed*0.7,seed*1.3); ejecta.add(m); });
   ejecta.visible=false; scene.add(ejecta);
-  lightShell=new THREE.Mesh(new THREE.SphereGeometry(1,96,64),shellMaterial(2.2)); lightShell.visible=false; scene.add(lightShell);
+  lightShell=new THREE.Mesh(new THREE.SphereGeometry(1,96,64),new THREE.ShaderMaterial({
+    uniforms:{uTime:{value:0},uInt:{value:0},uHot:{value:1},uHotCol:{value:new THREE.Vector3(0.6,0.75,1)},uSynch:{value:0},uFil:{value:0},uSeed:{value:0}},
+    transparent:true, side:THREE.DoubleSide, depthWrite:false, blending:THREE.AdditiveBlending,
+    vertexShader:`varying vec3 vN,vP; void main(){ vN=normalize(normalMatrix*normal); vec4 mv=modelViewMatrix*vec4(position,1.0); vP=mv.xyz; gl_Position=projectionMatrix*mv; }`,
+    fragmentShader:`uniform float uInt; uniform vec3 uHotCol; varying vec3 vN,vP;
+      void main(){ float mu=abs(dot(normalize(-vP),normalize(vN))); float limb=smoothstep(0.0,0.3,mu)/max(mu,0.2)*(0.15+0.85*pow(1.0-mu,1.5)); gl_FragColor=vec4(uHotCol*limb*uInt*1.6,1.0); }`}));
+  lightShell.visible=false; scene.add(lightShell);
 }
 
 // Neutron star, 12 km, with faint radio beams and a lighthouse flash
@@ -939,43 +1001,44 @@ function buildPlanets(){
   PD.forEach((pd,i)=>{
     const grp=new THREE.Group();
     const m=new THREE.ShaderMaterial({
-      uniforms:{uColor:{value:new THREE.Vector3(...pd.color)},uLightPos:{value:new THREE.Vector3()},uLightCol:{value:new THREE.Vector3(1,1,1)},
+      uniforms:{uColor:{value:new THREE.Vector3(...pd.color)},uLightPos:{value:new THREE.Vector3()},uLightCol:{value:new THREE.Vector3(1,1,1)},uAmb:{value:new THREE.Vector3()},
         uStretch:{value:0},uBHDir:{value:new THREE.Vector3()},uHeat:{value:0},uDissolve:{value:0},uTime:{value:0},
         uType:{value:{rocky:0,gas:1,ice:2,earth:3}[pd.type]},uSeed:{value:i*13.7}},
       transparent:true,
       vertexShader:NOISE_GLSL+`uniform float uStretch,uDissolve,uTime; uniform vec3 uBHDir; varying vec3 vWN,vW,vL,vP,vN;
         void main(){ vL=position; vec3 p=position;
           if(uStretch>0.0){ float pr=dot(p,uBHDir); vec3 rad=uBHDir*pr, lat=p-rad;
-            p=rad*(1.0+uStretch*4.0*(1.0+abs(pr)*uStretch*1.5))+lat/(1.0+uStretch*3.0);
-            if(uStretch>0.3){ float br=smoothstep(0.3,0.8,uStretch); p+=normal*(fbm(position*12.0+uTime*0.5)*0.25+snoise(position*20.0+uTime*0.8)*0.15)*br; } }
-          if(uDissolve>0.0){ p+=(normal+uBHDir*0.5)*uDissolve*(0.3+fbm(position*5.0+uTime*0.4)*0.7)*1.5; }
+            p=rad*(1.0+uStretch*2.2*(1.0+abs(pr)*uStretch))+lat/(1.0+uStretch*1.6);
+            if(uStretch>0.3){ float br=smoothstep(0.3,0.8,uStretch); p+=normal*(fbm3(position*12.0+uTime*0.5)*0.25+snoise(position*20.0+uTime*0.8)*0.15)*br; } }
+          if(uDissolve>0.0){ p+=(normal+uBHDir*0.5)*uDissolve*(0.3+fbm3(position*5.0+uTime*0.4)*0.7)*1.5; }
           vec4 w=modelMatrix*vec4(p,1.0); vW=w.xyz; vWN=normalize(mat3(modelMatrix)*normal);
           vN=normalize(normalMatrix*normal); vec4 mv=viewMatrix*w; vP=mv.xyz; gl_Position=projectionMatrix*mv; }`,
-      fragmentShader:NOISE_GLSL+`uniform vec3 uColor,uLightPos,uLightCol; uniform float uStretch,uHeat,uDissolve,uTime,uType,uSeed; varying vec3 vWN,vW,vL,vP,vN;
+      fragmentShader:NOISE_GLSL+`uniform vec3 uColor,uLightPos,uLightCol,uAmb; uniform float uStretch,uHeat,uDissolve,uTime,uType,uSeed; varying vec3 vWN,vW,vL,vP,vN;
         void main(){
           vec3 L=normalize(uLightPos-vW); float nl=dot(normalize(vWN),L); float diff=max(nl,0.0);
           float mu=abs(dot(normalize(-vP),vN));
           vec3 c; vec3 q=vL/length(vL);
           if(uType>2.5){ // earth: oceans, continents, cloud deck
-            float land=smoothstep(0.05,0.12,fbm(q*2.6+uSeed));
-            vec3 ocean=vec3(0.02,0.07,0.18), ground=mix(vec3(0.20,0.25,0.10),vec3(0.42,0.33,0.22),fbm(q*7.0)*0.5+0.5);
+            float land=smoothstep(0.05,0.12,fbm3(q*2.6+uSeed));
+            vec3 ocean=vec3(0.02,0.07,0.18), ground=mix(vec3(0.20,0.25,0.10),vec3(0.42,0.33,0.22),fbm3(q*7.0)*0.5+0.5);
             c=mix(ocean,ground,land); c=mix(c,vec3(0.9),smoothstep(0.75,0.9,abs(q.y)));
-            float cl=smoothstep(0.1,0.55,fbm(q*4.0+vec3(uTime*0.02,0.0,0.0)+uSeed*2.0)); c=mix(c,vec3(0.95),cl*0.8);
-          } else if(uType>1.5){ float b=sin(q.y*10.0+fbm(q*4.0+uTime*0.03)*1.2)*0.5+0.5; c=uColor*(0.88+0.12*b);
-          } else if(uType>0.5){ float bd=fbm(q*3.0+vec3(0.0,uTime*0.02,0.0)); float b=sin((q.y+bd*0.12)*20.0)*0.5+0.5;
-            c=mix(uColor*0.6,uColor*1.12,b); float storm=smoothstep(0.62,0.78,turbulence(q*4.0+uSeed)); c=mix(c,vec3(0.8,0.42,0.28),storm*0.35);
-          } else { float t=fbm(q*5.0+uSeed); c=uColor*(0.75+0.35*t+snoise(q*22.0)*0.08); }
+            float cl=smoothstep(0.1,0.55,fbm3(q*4.0+vec3(uTime*0.02,0.0,0.0)+uSeed*2.0)); c=mix(c,vec3(0.95),cl*0.8);
+          } else if(uType>1.5){ float b=sin(q.y*10.0+fbm3(q*4.0+uTime*0.03)*1.2)*0.5+0.5; c=uColor*(0.88+0.12*b);
+          } else if(uType>0.5){ float bd=fbm3(q*3.0+vec3(0.0,uTime*0.02,0.0)); float b=sin((q.y+bd*0.12)*20.0)*0.5+0.5;
+            c=mix(uColor*0.6,uColor*1.12,b); float storm=smoothstep(0.62,0.78,turb3(q*4.0+uSeed)); c=mix(c,vec3(0.8,0.42,0.28),storm*0.35);
+          } else { float t=fbm3(q*5.0+uSeed); c=uColor*(0.75+0.35*t+snoise(q*22.0)*0.08); }
           // terminator: soft (atmospheres) vs hard (airless)
           float term=uType>0.5?smoothstep(-0.12,0.35,nl):smoothstep(-0.02,0.15,nl);
           vec3 lit=c*uLightCol*(term*(0.25+0.75*diff));
           float atm=uType>0.5?pow(1.0-mu,3.0)*smoothstep(-0.25,0.3,nl):0.0;
           vec3 atmC=uType>2.5?vec3(0.35,0.6,1.0):(uType>1.5?vec3(0.5,0.8,0.95):vec3(0.9,0.75,0.5));
           lit+=atmC*uLightCol*atm*0.6;
-          if(uHeat>0.0){ float cb=turbulence(vL*15.0+uTime*0.2); float cr=smoothstep(0.35,0.4,cb)*(1.0-smoothstep(0.4,0.45,cb));
+          lit+=c*uAmb*(0.55+0.45*mu);
+          if(uHeat>0.0){ float cb=turb3(vL*15.0+uTime*0.2); float cr=smoothstep(0.35,0.4,cb)*(1.0-smoothstep(0.4,0.45,cb));
             vec3 hc=mix(vec3(0.8,0.08,0.0),vec3(1.0,0.45,0.05),smoothstep(0.0,0.5,uHeat)); hc=mix(hc,vec3(1.6,1.3,1.0),smoothstep(0.6,1.0,uHeat));
             lit=mix(lit,hc*4.0,(cr*1.4+smoothstep(0.3,0.5,cb)*0.4)*uHeat); lit+=hc*uHeat*uHeat*1.5; }
           float a=1.0;
-          if(uDissolve>0.0){ float th=(fbm(vL*5.0+uTime*0.3)*0.5+0.5)*0.7+(turbulence(vL*12.0)*0.5+0.5)*0.3;
+          if(uDissolve>0.0){ float th=(fbm3(vL*5.0+uTime*0.3)*0.5+0.5)*0.7+(turb3(vL*12.0)*0.5+0.5)*0.3;
             a=1.0-smoothstep(th-0.1,th,uDissolve); lit+=vec3(3.0,1.2,0.2)*smoothstep(th-0.15,th-0.05,uDissolve)*(1.0-smoothstep(th-0.05,th,uDissolve)); }
           gl_FragColor=vec4(lit,a);
         }`
@@ -1003,40 +1066,46 @@ function buildPlanets(){
     const orbitLine=new THREE.Line(og,new THREE.LineBasicMaterial({color:0x9fb3d1,transparent:true,opacity:0.12,depthWrite:false}));
     orbitLine.visible=false; scene.add(orbitLine);
     // tidal stream: each particle carries its own orbital energy, so Keplerian shear stretches the debris into an arc
-    const DN=Math.round((IS_MOBILE?900:2200)*(pd.type==='gas'?1.6:1)), rnd=new Float32Array(DN*4), dp=new Float32Array(DN*3);
+    const DN=Math.round((IS_MOBILE?1300:3200)*(pd.type==='gas'?1.6:1)), rnd=new Float32Array(DN*4), dp=new Float32Array(DN*3);
     for(let j=0;j<DN*4;j++) rnd[j]=Math.random();
     const dg=new THREE.BufferGeometry(); dg.setAttribute('position',new THREE.BufferAttribute(dp,3)); dg.setAttribute('aR',new THREE.BufferAttribute(rnd,4));
     const dm=new THREE.ShaderMaterial({uniforms:{tPlanck:{value:PLANCK_TEX},uTime:{value:0},uAlpha:{value:0},uTD:{value:0},uRt:{value:8},uTheta0:{value:0},uRin:{value:3.4},uK:{value:1},
-        uCol:{value:new THREE.Vector3(...pd.color)},uLight:{value:new THREE.Vector3()},uPR:{value:pixelRatio},uSize:{value:pd.r}},
-      transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,
-      vertexShader:NOISE_GLSL+BB_GLSL+`attribute vec4 aR; uniform float uTime,uAlpha,uTD,uRt,uTheta0,uRin,uK,uPR,uSize; uniform vec3 uCol,uLight; varying vec3 vC; varying float vA;
+        uCol:{value:new THREE.Vector3(...pd.color)},uLight:{value:new THREE.Vector3()},uPR:{value:pixelRatio},uSize:{value:pd.r},uInc:{value:(i%2?1:-1)*(0.42+0.04*i)}},
+      transparent:true,depthWrite:true,depthTest:true,blending:THREE.AdditiveBlending,
+      vertexShader:NOISE_GLSL+BB_GLSL+`attribute vec4 aR; uniform float uTime,uAlpha,uTD,uRt,uTheta0,uRin,uK,uPR,uSize,uInc; uniform vec3 uCol,uLight; varying vec3 vC; varying float vA;
         void main(){
-          float de=aR.x*2.0-1.0;                         // specific-energy spread across the planet
+          float pearl=step(aR.w,0.3);                    // fragments, like the string of pearls of comet Shoemaker-Levy 9
+          float de=mix(aR.x,(floor(aR.x*13.0)+0.5)/13.0,pearl)*2.0-1.0;
           float bound=step(de,0.5);
-          float t=max(uTD-aR.y*1.1,0.0);                 // material peels off progressively
+          float pk=floor(aR.x*12.0);
+          float rel=mix(aR.y*1.1, pk/12.0*0.9, pearl);
+          float t=max(uTD-rel,0.0);                    // material peels off progressively
           float r0=uRt*(1.0+0.22*de);
-          float g=bound>0.5?(0.16+0.5*(0.5-de)):-0.05;  // bound debris falls back, the unbound tail escapes
+          float g=bound>0.5?(0.035+0.13*(0.5-de)):-0.04;  // bound debris falls back, the unbound tail escapes
           float r=r0*exp(-g*t);
           float eaten=bound*smoothstep(uRin*1.15,uRin*0.97,r);
           r=max(r,uRin*0.97);
           float w0=uK*pow(r0,-1.5);
           float th=uTheta0+w0*(exp(1.5*g*t)-1.0)/(1.5*g);
           vec3 p=vec3(cos(th)*r,0.0,-sin(th)*r);
+          vec3 nodes=vec3(cos(uTheta0),0.0,-sin(uTheta0));
+          float ci=cos(uInc), si=sin(uInc);
+          p=p*ci+cross(nodes,p)*si+nodes*dot(nodes,p)*(1.0-ci);   // rotate about the line of nodes
           vec3 lat=vec3(aR.z-0.5,(aR.w-0.5)*0.5,fract(aR.y*7.31)-0.5);
-          float thick=uSize*(0.9*exp(-t*0.8)+0.08);
+          float thick=uSize*(0.7*exp(-t*0.9)+0.05)*mix(1.0,0.22,pearl);
           p+=lat*thick+vec3(snoise(vec3(aR.x*9.0,t*0.7,1.0)),0.0,snoise(vec3(aR.x*9.0,t*0.7,4.0)))*thick*0.6;
           float heat=smoothstep(0.0,2.5,t)*pow(clamp(uRin/r,0.0,1.0),0.9);
           float T=400.0+8600.0*heat;                     // viscous and shock heating as it compresses
           vec3 bb=planckRGB(T); float L=lum(bb);
           vec3 glow=bb/max(L,1e-8)*min(L*${(1/lum3(planckRGB(6000))).toFixed(4)},4.0);
-          vC=uCol*uLight*0.12*(1.0-heat)+glow*1.6;
-          vA=uAlpha*smoothstep(0.0,0.3,uTD-aR.y*1.1)*(1.0-eaten)*(bound>0.5?1.0:1.0-smoothstep(0.0,7.0,t));
+          vC=(uCol*uLight*0.12*(1.0-heat)+glow*1.6)*mix(0.55,2.0,pearl);
+          vA=uAlpha*smoothstep(0.0,0.3,uTD-rel)*(1.0-eaten)*(bound>0.5?1.0:1.0-smoothstep(0.0,7.0,t));
           vec4 mv=modelViewMatrix*vec4(p,1.0);
-          gl_PointSize=(0.8+aR.w*1.4)*uPR*(80.0/-mv.z)*(1.0+heat);
+          gl_PointSize=(1.0+aR.w*1.4)*uPR*(115.0/-mv.z)*(1.0+heat)*mix(1.0,1.5,pearl);
           gl_Position=projectionMatrix*mv;
         }`,
-      fragmentShader:`varying vec3 vC; varying float vA; void main(){ vec2 q=gl_PointCoord-0.5; float a=exp(-dot(q,q)*12.0); gl_FragColor=vec4(vC*a*vA,1.0); }`});
-    const debris=new THREE.Points(dg,dm); debris.frustumCulled=false; debris.layers.set(LAYER_OVERLAY); debris.visible=false; scene.add(debris);
+      fragmentShader:`varying vec3 vC; varying float vA; void main(){ vec2 q=gl_PointCoord-0.5; float a=exp(-dot(q,q)*12.0)*vA; if(a<0.03) discard; gl_FragColor=vec4(vC*a,1.0); }`});
+    const debris=new THREE.Points(dg,dm); debris.frustumCulled=false; debris.visible=false; scene.add(debris);
     planets.push({def:pd,grp,body,mat:m,rings,orbitLine,debris,debrisMat:dm,orbit:pd.orbit,angle:pd.phase,state:'ok',inspiralT:-1,r0:pd.orbit,flash:0});
   });
   buildBodiesTable();
@@ -1139,7 +1208,7 @@ function showCaption(i){
 }
 
 // Init
-function init(){
+async function init(){
   try{
     renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance',alpha:false,stencil:false});
   }catch(e){ $('fatal').style.display='grid'; $('loader').classList.add('out'); return; }
@@ -1154,15 +1223,17 @@ function init(){
   camera=new THREE.PerspectiveCamera(46,innerWidth/innerHeight,0.5,3000);
   fitFov(); camera.updateProjectionMatrix();
   clock=new THREE.Clock();
-  skyTex=buildSky();
+  const tick=()=>new Promise(r=>setTimeout(r,0));
+  const pct=v=>{ $('ld-pct').textContent=`${Math.round(v*100)}%`; };
+  await tick(); skyTex=buildSky(); pct(0.12); await tick();
   pipe=new Pipeline(); pipe.initLens(); pipe.initNebula(); pipe.initPlain();
   buildStar(); buildEjecta(); buildNeutronStar(); buildJets(); buildPlanets(); buildOverlayParticles(); buildFabric();
   buildTimeline(); hookEvents();
-  resetAll(); showCaption(0);
-  const vis=[]; scene.traverse(o=>{ vis.push([o,o.visible]); o.visible=true; });
-  camera.layers.enableAll(); renderer.compile(scene,camera); camera.layers.set(LAYER_MAIN);
-  vis.forEach(([o,v])=>{ o.visible=v; });
-  [pipe.nebMat,pipe.plainMat,pipe.lensMat,pipe.brightMat,pipe.blurH,pipe.blurV,pipe.finalMat].forEach(m=>{ pipe.quad.material=m; renderer.compile(pipe.quadScene,pipe.quadCam); });
+  resetAll(); showCaption(0); pct(0.2); await tick();
+  // compile every shader now, one object per step, so no phase stalls on first appearance
+  const jobs=scene.children.map(o=>()=>{ renderer.compile(o,camera); });
+  [pipe.plainMat,pipe.finalMat,pipe.brightMat,pipe.blurH,pipe.blurV,pipe.lensMat,pipe.nebCold,pipe.nebHot,pipe.nebPwn].forEach(m=>jobs.push(()=>{ pipe.quad.material=m; renderer.compile(pipe.quadScene,pipe.quadCam); }));
+  for(let i=0;i<jobs.length;i++){ jobs[i](); pct(0.2+0.8*(i+1)/jobs.length); await tick(); }
   let frames=0;
   const boot=()=>{ frames++; animate(true); if(frames<3) requestAnimationFrame(boot); else { $('loader').classList.add('out'); requestAnimationFrame(loop); } };
   requestAnimationFrame(boot);
@@ -1266,7 +1337,7 @@ function updatePhase(dt){
   const shellR=t=>8.2+3.3*Math.pow(t,1.05);
   const setShells=(R,intensity,hot,hotCol,synch)=>{ ejecta.visible=intensity>0.002; ejecta.scale.setScalar(R);
     ejecta.children.forEach((m,k)=>{ const u=m.material.uniforms; u.uInt.value=intensity*(0.42-k*0.08); u.uHot.value=hot; if(hotCol) u.uHotCol.value.set(...hotCol); u.uSynch.value=synch; u.uTime.value=simTime; }); };
-  let neb={R:0,int:0,dust:0,pwn:0};
+  let neb={R:0,int:0,dust:0,pwn:0,hot:0,hotT:6000,hotB:1,fill:0,pwnR:0,pwnInt:0}; amb.set(0.012,0.012,0.016);
 
   if(P===PH.ms){ // main sequence: 37 kK O star
     st.visible=true; st.R=3+Math.sin(simTime*0.4)*0.02; st.Teff=lerp(37500,33500,pP); st.cell=16; st.contrast=0.035; st.disp=0.004; st.flow=0.02; st.alpha=1; st.bright=2.6; st.coronaOp=0.6;
@@ -1291,11 +1362,13 @@ function updatePhase(dt){
       sn.fired=true;
       if(snT<0.05){ pipe.flash=Math.max(pipe.flash,2.4); pipe.flashCol.set(0.75,0.82,1.0); shake=Math.max(shake,1); }
       const R=shellR(snT), Tph=5600+180000*Math.exp(-snT*1.7);
-      st.visible=snT<8.5; st.R=R; st.Teff=Tph; st.cell=1.7; st.contrast=0.22; st.disp=0.05; st.flow=0.12; st.coronaOp=0.9;
-      st.alpha=1-smooth(3.2,7.8,snT); st.bright=3.6*(1+2.5*Math.exp(-snT*1.4));
+      const B=3.6*(1+2.5*Math.exp(-snT*1.4));
+      st.visible=snT<1.4; st.R=R*0.97; st.Teff=Tph; st.cell=1.7; st.contrast=0.22; st.disp=0.05; st.flow=0.12; st.coronaOp=0.9;
+      st.alpha=1-smooth(0.4,1.4,snT); st.bright=B;
       pipe.flash=Math.max(pipe.flash,0.9*Math.exp(-snT*0.55));
-      setShells(R*1.18, smooth(1,5,snT)*lerp(0.35,1,smooth(2,7,snT))*(1-smooth(7,10,snT)*0.5), 1-smooth(2.5,7.5,snT), bbColor(Tph), 0.2);
-      neb={R:R*1.25,int:smooth(6,10,snT)*0.6,dust:0,pwn:0};
+      setShells(R,0,0,null,0);
+      neb={R:R*1.12,int:smooth(0,0.35,snT),dust:smooth(6,9.5,snT)*0.4,pwn:0,hot:1-smooth(2.2,9.0,snT),hotT:Tph,hotB:B*0.42,fill:1-smooth(2.5,8.5,snT),pwnR:0,pwnInt:0};
+      amb.set(...bbColor(Tph)).multiplyScalar(0.25*(1-smooth(2,9,snT))+0.06);
       hud.temp=`${Math.round(Tph).toLocaleString()} K`; hud.tempLabel='T<sub>phot</sub>'; hud.epoch=`+${Math.round(snT*14)} d`; hud.size=`${Math.round(R/8.2*1050).toLocaleString()} R☉ (photosphere)`;
       light=lerp(30,8,smooth(0,6,snT))*(st.alpha*0.8+0.2); lightC=bbColor(Tph);
       expoTarget=lerp(0.32,0.7,smooth(0,7,snT));
@@ -1304,8 +1377,9 @@ function updatePhase(dt){
     if(pP>=1) advance();
   } else if(P===PH.neb){ // supernova remnant: emission nebula with dust
     const snT=SN_END+phaseTime, R=shellR(snT), e=smooth(0,1,pP);
-    setShells(R*1.1,0.5*(1-smooth(0,0.25,pP)),0,null,0.6);
-    neb={R:R*1.2,int:lerp(0.6,1,smooth(0,0.2,pP)),dust:smooth(0.1,0.7,pP),pwn:smooth(0.2,0.8,pP)};
+    setShells(R,0,0,null,0);
+    neb={R:R*1.12,int:1,dust:lerp(0.4,1,smooth(0,0.7,pP)),pwn:smooth(0.1,0.7,pP),hot:0,hotT:5600,hotB:1,fill:0,pwnR:0,pwnInt:0};
+    amb.set(0.30,0.12,0.16);
     nsGroup.visible=true; nsGroup.scale.setScalar(1); pulsar(dt,0.012,0.6);
     const yrs=Math.round(lerpLog(1,1000,e));
     hud.massSun=PHYS.NS_MASS; hud.tempLabel='T<sub>e</sub> (gas)'; hud.temp='≈ 10⁴ K, shock 10⁷ K';
@@ -1315,7 +1389,8 @@ function updatePhase(dt){
     if(pP>=1) advance();
   } else if(P===PH.ns){ // neutron star inside its remnant
     const snT=SN_END+PHASE_DUR[PH.neb]+phaseTime, R=shellR(snT), t=ease(pP);
-    neb={R:R*1.2,int:lerp(1,0.75,pP),dust:1,pwn:1};
+    neb={R:R*1.12,int:lerp(0.45,0.3,pP),dust:1,pwn:0,hot:0,hotT:5600,hotB:1,fill:0,pwnR:9,pwnInt:smooth(0,0.15,pP)*(1-smooth(0.88,0.97,pP))};
+    amb.set(0.16,0.09,0.13);
     nsGroup.visible=true;
     const period=lerp(0.012,0.033,t); const pulse=pulsar(dt,period,1);
     lensM=PHYS.NS_MASS/PHYS.M_BH*lerp(1,PHYS.TOV_LIMIT/PHYS.NS_MASS,t);
@@ -1324,14 +1399,14 @@ function updatePhase(dt){
     hud.z=`z(surface) = ${(1/Math.sqrt(1-2*hud.massSun*PHYS.KM_PER_MSUN/PHYS.NS_RADIUS_KM)-1).toFixed(2)}`;
     light=1.2; lightC=[0.7,0.78,1];
     if(pP>0.9){ pipe.flash=Math.max(pipe.flash,(pP-0.9)/0.1*1.6); pipe.flashCol.set(0.8,0.85,1); nsGroup.scale.setScalar(Math.max(0.05,1-(pP-0.9)/0.1)); } else nsGroup.scale.setScalar(1);
-    camTarget={dist:lerp(24,20,t),pitch:0.22}; expoTarget=0.75;
+    camTarget={dist:lerp(30,24,t),pitch:0.36}; expoTarget=0.8;
     if(pP>=1) advance();
   } else if(P===PH.bh){ // collapse to a Kerr hole, fallback accretion
     const t=ease(pP);
     const Msun=lerp(PHYS.TOV_LIMIT,PHYS.M_BH,smooth(0,0.7,pP)); bh.M=Msun/PHYS.M_BH; bh.spin=PHYS.SPIN;
     bh.disk=smooth(0.08,0.55,pP); bh.diskOut=lerp(5,15,smooth(0.05,0.8,pP));
     const snT=SN_END+PHASE_DUR[PH.neb]+PHASE_DUR[PH.ns]+phaseTime;
-    neb={R:shellR(snT)*1.2,int:0.75*(1-smooth(0,0.6,pP)),dust:1,pwn:1-smooth(0,0.1,pP)};
+    neb={R:shellR(snT)*1.12,int:0.3*(1-smooth(0,0.6,pP)),dust:1,pwn:0,hot:0,hotT:5600,hotB:1,fill:0,pwnR:9,pwnInt:0};
     if(phaseTime<0.08) pipe.flash=Math.max(pipe.flash,1.4);
     hud.massSun=Msun; hud.tempLabel='T<sub>disk</sub>'; hud.temp=bh.disk>0.05?`${sci(PHYS.DISK_TMAX_TRUE)} K (X-ray)`:'n/a';
     hud.size=`r₊ = ${(horizon(PHYS.SPIN)*Msun*PHYS.KM_PER_MSUN).toFixed(1)} km`; hud.epoch=`fallback +${Math.round(pP*40)} d`;
@@ -1394,6 +1469,7 @@ function updatePhase(dt){
     if(pP>=1) advance();
   }
   const nu=pipe.lensMat.uniforms; nu.uNebR.value=neb.R; nu.uNebInt.value=neb.int; nu.uNebDust.value=neb.dust; nu.uNebPWN.value=neb.pwn;
+  nu.uHot.value=neb.hot; nu.uHotT.value=neb.hotT; nu.uHotB.value=neb.hotB; nu.uHotNorm.value=1/Math.max(lum3(planckRGB(neb.hotT)),1e-9); nu.uFill.value=neb.fill; nu.uPwnR.value=neb.pwnR; nu.uPwnInt.value=neb.pwnInt;
 
   // apply star uniforms
   starMesh.visible=coronaMesh.visible=st.visible;
@@ -1452,22 +1528,23 @@ function updatePlanets(dt){
     }
     if(p.state==='shred'){ // tidal disruption: body torn, debris sheared into a stream that falls back as t^-5/3
       p.shredT+=dt; const s=p.shredT;
-      stretch=smooth(0,1.3,s); heat=smooth(0.2,1.6,s); dissolve=smooth(0.7,2.1,s);
+      stretch=smooth(0,1.1,s); heat=smooth(0.0,0.9,s); dissolve=smooth(0.5,1.5,s);
       const tr=1.4; p.flash=s>tr?Math.min(1.3,1.3*Math.pow(s/tr,-5/3)):0;
       if(s>tr&&!p.thud){ p.thud=true; pipe.flash=Math.max(pipe.flash,0.3); pipe.flashCol.set(1,0.9,0.8); }
       const du=p.debrisMat.uniforms; p.debris.visible=true;
       du.uTD.value=s; du.uRt.value=roche; du.uTheta0.value=p.shredAngle; du.uRin.value=rin; du.uK.value=K;
-      du.uAlpha.value=smooth(0,0.4,s)*(1-smooth(9,11,s)); du.uLight.value.copy(lightCol); du.uTime.value=simTime;
-      if(s>11){ p.state='consumed'; p.debris.visible=false; p.flash=0; }
+      du.uAlpha.value=smooth(0,0.4,s)*(1-smooth(13,16,s)); du.uLight.value.copy(lightCol); du.uTime.value=simTime;
+      if(s>16){ p.state='consumed'; p.debris.visible=false; p.flash=0; }
     } else p.debris.visible=false;
-    p.grp.visible=p.state==='ok'||(p.state==='shred'&&p.shredT<2.2);
+    p.grp.visible=p.state==='ok'||(p.state==='shred'&&p.shredT<1.6);
     p.grp.position.set(Math.cos(p.angle)*p.orbit,0,-Math.sin(p.angle)*p.orbit);
     if(stretch<0.05) p.grp.rotation.y+=dt*0.6;
     const toBH=TMP.v1.copy(p.grp.position).negate().normalize();
+    if(p.state==='shred'){ const k=0.7*smooth(0.4,2.0,p.shredT); TMP.v2.set(-Math.sin(p.angle),0,-Math.cos(p.angle)); toBH.multiplyScalar(1-k).addScaledVector(TMP.v2,k).normalize(); }
     const u=p.mat.uniforms;
     u.uStretch.value=ease(stretch); u.uHeat.value=heat; u.uDissolve.value=dissolve*1.4;
     u.uBHDir.value.copy(toBH.applyQuaternion(TMP.q.copy(p.grp.quaternion).invert())); u.uTime.value=simTime;
-    u.uLightPos.value.copy(lightPos); u.uLightCol.value.copy(lightCol);
+    u.uLightPos.value.copy(lightPos); u.uLightCol.value.copy(lightCol); u.uAmb.value.copy(amb);
     p.rings.forEach(r=>{ if(r.uniforms) r.uniforms.uLightCol.value.copy(lightCol).multiplyScalar(0.3*(1-dissolve)); else r.opacity=Math.min(0.7,0.15+lum3([lightCol.x,lightCol.y,lightCol.z])*0.05)*(1-dissolve); });
   });
 }
@@ -1546,7 +1623,7 @@ function animate(boot){
       else fastRuns=0; } }
 }
 
-setTimeout(()=>{ try{ init(); }catch(err){ console.error(err); $('fatal').querySelector('h2').textContent='The simulation failed to start'; $('fatal').querySelector('p').textContent=String(err&&err.message||err); $('fatal').style.display='grid'; $('loader').classList.add('out'); } },40);
+setTimeout(()=>{ init().catch(err=>{ console.error(err); $('fatal').querySelector('h2').textContent='The simulation failed to start'; $('fatal').querySelector('p').textContent=String(err&&err.message||err); $('fatal').style.display='grid'; $('loader').classList.add('out'); }); },40);
 </script>
 </body>
 </html>
